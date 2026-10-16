@@ -32,10 +32,10 @@ is checked in both environments. TypeScript and Node type declarations are
 exactly pinned development dependencies; there are no runtime dependencies or
 bundler.
 
-Browser smoke checklist: start the server, open the URL, and confirm that the
-status reads “P3 — Starter economy: starter state ready (25 Funding, one founder, one telescope).” Check
-that there are no browser errors or failed module/style requests, then reload
-and confirm the same result.
+The browser starts paused. Choose **Observe the Moon**, click **Assign founder**,
+then click **Run** or **+10 s**. Switch to **Analyze lunar observations** and
+advance another ten seconds to complete your first record. Follow the objective
+strip to buy outreach, track a planet, and build the imaging setup.
 
 ## Implementation status
 
@@ -49,8 +49,9 @@ The browser creates the same starter state as Node.
 P2 adds fixed ticks, shared-input reservations, atomic commands, rate summaries,
 and events. P3 adds the reachable starter economy, typed observation lots and
 analysis evidence, outreach/donations, tracking, reflector, camera, and workstation.
-Next is **P4: plain playable browser controls**. General simulation/sweep commands
-and reports arrive in later packages.
+P4 makes the starter slice playable with purchases, founder/instrument assignment,
+outreach, explanations, time controls, and local saves. Next is **P5: academy and
+team**. General simulation/sweep commands and reports arrive in later packages.
 
 ## Definitions and saves
 
@@ -71,8 +72,7 @@ game = deserializeGame(json); // Only replace the active game after success.
 All three functions also accept `(definitions, balance)` after their main
 argument; `createGame(definitions, balance)` has no main argument. They default
 to the bundled configuration. The core has no storage, timers, DOM, or Node
-imports. Save/load currently uses strings through this API; browser import/export
-controls and autosave are later work.
+imports. Browser import/export and localStorage use this same API.
 
 The save envelope identifies schema, content, simulation, and balance versions.
 Its deterministic FNV-1a configuration fingerprint covers both the balance
@@ -138,8 +138,7 @@ science milestones have explicit evidence or audience conditions.
 
 P2 verification uses one small kernel scenario for atomic spending, snapshot
 reservations, priority, single completion, and matching chunked/save continuation.
-Its stock recipes are fixtures rather than game content. The initial browser
-shell remains idle until controls are implemented. Schema 3 and simulation
+Its stock recipes are fixtures rather than game content. Schema 3 and simulation
 `0.3.0-p3` intentionally reject the earlier prototype saves.
 
 ## Starter economy (P3)
@@ -190,6 +189,34 @@ before camera/workstation purchases. Prices and rates remain seed hypotheses;
 the complete prestige cycle is still needed to assess pacing. P3 adds one
 progression test covering image reachability, zero-F recovery, and saving the
 resulting data/evidence state; it reuses the existing kernel smoke test.
+
+## Playing in the browser (P4)
+
+- Use **Run/Pause** and **1×/5×/20×** for real-time play. **Step**, **+10 s**, and
+  **+60 s** pause and advance exact amounts. Hidden tabs pause; closed tabs do
+  not earn offline progress. Accelerating the simulation never skips ticks.
+- Founder assignment switches off the previous founder task and any conflicting
+  telescope allocation through ordinary commands. Choose **Idle** to stop work.
+  The task menu reveals observations and analysis methods as they become available.
+- Outreach has its own instrument assignment and donation audience allocation.
+  While analyzing, put the free telescope back on outreach. Once the reflector
+  is built, keep the founding telescope on outreach while the founder captures images.
+- Purchases reveal progressively. Disabled buttons explain missing prerequisites
+  and resources. Repeat free observations/analysis for more Knowledge; first-time
+  milestones do not remove repeat production. Purchases tolerate tiny numerical
+  rounding residue at the stated cost.
+- Resources show gross, consumed, and net rates. Typed queues, evidence, milestone
+  bars, instrument roles, journal records, and recent activity explain progression.
+  Expand **Operations & rate details** for shortages, modifiers, and job priorities.
+- The game saves locally every five seconds, after successful actions, on pause,
+  and on leaving the page. Reload restores it paused. **Export save** downloads
+  portable JSON; **Import save** validates a file before replacing the active game.
+  Failed imports retain the current session. **Restart prototype** asks before
+  replacing the browser save. Import/export handles the bundled balance; custom
+  scenario configurations remain a headless workflow.
+
+The plain DOM interface adds no runtime packages, engine, or artwork. P4 uses
+browser playthrough verification instead of adding automated UI test infrastructure.
 
 See [the game design](eyes-on-the-universe-game-plan.md) and
 [the implementation plan](eyes-on-the-universe-prototype-implementation-plan.md)

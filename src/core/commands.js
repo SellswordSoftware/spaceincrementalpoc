@@ -1,6 +1,9 @@
 import { getUpgradeLevel, hasPrerequisite } from './rates.js';
 import { choice, id, integer, nonnegative, object } from './schema.js';
 
+// Match the simulation's tolerance for tiny floating-point accounting residue.
+const SPENDING_EPSILON = 1e-9;
+
 /** @typedef {import('./types.js').GameState} GameState */
 /** @typedef {import('./types.js').Definitions} Definitions */
 /** @typedef {import('./types.js').Command} Command */
@@ -78,7 +81,7 @@ export function quoteCommand(game, definitions, balance, command) {
   for (const [key, amount] of Object.entries(quote.costs)) {
     const available = key === 'L' ? game.state.legacy.balance : game.state.resources[/** @type {import('./types.js').StockId} */ (key)];
     if (!Number.isFinite(amount) || amount < 0) blocked.push(`Invalid cost for ${key}`);
-    else if (available === undefined || available < amount) blocked.push(`Insufficient ${key}`);
+    else if (available === undefined || available + SPENDING_EPSILON < amount) blocked.push(`Insufficient ${key}`);
   }
   quote.ok = blocked.length === 0;
   return quote;
@@ -94,8 +97,11 @@ export function dispatch(game, definitions, balance, command) {
   const quote = quoteCommand(game, definitions, balance, command);
   if (!quote.ok) return { ...quote, events: [] };
   for (const [key, amount] of Object.entries(quote.costs)) {
-    if (key === 'L') game.state.legacy.balance -= amount;
-    else game.state.resources[/** @type {import('./types.js').StockId} */ (key)] -= amount;
+    if (key === 'L') game.state.legacy.balance = Math.max(0, game.state.legacy.balance - amount);
+    else {
+      const stock = /** @type {import('./types.js').StockId} */ (key);
+      game.state.resources[stock] = Math.max(0, game.state.resources[stock] - amount);
+    }
   }
   let eventId = '';
   switch (command.type) {

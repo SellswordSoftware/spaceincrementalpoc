@@ -1,8 +1,8 @@
 // This entry point must remain usable in both Node and the browser.
-// Playable browser controls arrive in P4.
+// Browser and headless adapters share this model.
 export const prototypeInfo = Object.freeze({
   title: 'Eyes on the Universe',
-  stage: 'P3 — Starter economy',
+  stage: 'P4 — Playable prototype',
 });
 
 export { definitions } from '../definitions/content.js';
