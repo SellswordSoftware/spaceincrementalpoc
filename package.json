@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "node tools/server.js",
     "check": "tsc -p jsconfig.json && tsc -p tools/jsconfig.json",
-    "test": "node --test"
+    "test": "node --test",
+    "scenario:starter": "node scenarios/starter.js"
   },
   "devDependencies": {
     "@types/node": "24.12.4",

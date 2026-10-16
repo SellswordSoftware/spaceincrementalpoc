@@ -8,9 +8,9 @@ test('tick reservations, atomic purchase, and chunked continuation agree', () =>
   const config = { ...balance, startingStocks: { F: 0, K: 0, I: 0, X: 0, E: 0, C: 0 } };
   /** @type {import('../src/core/types.js').RecipeDefinition} */
   const recipe = { id: 'supply', name: 'Supply fixture', prerequisites: [], inputs: {}, outputs: { F: 4, K: 4 }, capacity: 1, stat: null, requiresFounder: false, compatibleInstruments: [], workRequired: null };
-  content.recipes.push(recipe,
+  content.recipes = [recipe,
     { ...recipe, id: 'consumer-a', inputs: { F: 4 }, outputs: { X: 4 }, workRequired: 0.5 },
-    { ...recipe, id: 'consumer-b', inputs: { F: 4 }, outputs: { C: 4 } });
+    { ...recipe, id: 'consumer-b', inputs: { F: 4 }, outputs: { C: 4 } }];
   const game = createGame(content, config);
   assert.ok(dispatch(game, content, config, { type: 'setJobAllocation', jobId: 'supply', recipeId: 'supply', allocation: 1 }).ok);
   advanceTicks(game, content, config, 1);

@@ -26,12 +26,14 @@ export function createGame(definitions = defaultDefinitions, balance = defaultBa
         upgrades: {},
       },
       population: { founder: { task: 'idle' }, groups: [] },
-      data: [], jobs: [],
+      data: [], jobs: definitions.recipes.filter(recipe => recipe.activity?.kind === 'donations').map(recipe => ({
+        id: recipe.id, recipeId: recipe.id, instrumentId: null, allocation: 1, priority: 0, progress: 0,
+      })),
       investigations: { evidence: [], activePrograms: [], completedPrograms: [] },
-      campaign: { upgrades: {}, publications: 0, scientificOutput: 0 },
+      campaign: { upgrades: {}, publications: 0, scientificOutput: 0, interestEarned: 0 },
       lifetime: { journal: [], unlocked: ['backyard'], claimedDepthBonuses: [] },
       legacy: { balance: balance.startingLegacy, upgrades: {}, purchaseHistory: [] },
-      preferences: { assignments: [] },
+      preferences: { assignments: [], audience: { donations: 1, recruitment: 0 } },
       modified: false,
     },
   };

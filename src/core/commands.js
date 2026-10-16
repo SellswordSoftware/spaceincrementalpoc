@@ -57,6 +57,10 @@ export function quoteCommand(game, definitions, balance, command) {
         if (command.allocation + others.filter(item => item.recipeId === recipe.id).reduce((sum, item) => sum + item.allocation, 0) > 1) blocked.push('Recipe capacity is already allocated');
         if (selectedInstrument !== null && command.allocation + others.filter(item => item.instrumentId === selectedInstrument).reduce((sum, item) => sum + item.allocation, 0) > 1) blocked.push('Instrument capacity is already allocated');
       }
+    } else if (command?.type === 'setAudienceAllocation') {
+      object({ type: choice(['setAudienceAllocation']), donations: nonnegative, recruitment: nonnegative })(command, 'command');
+      if (!hasPrerequisite(game, 'outreach')) blocked.push('Requires outreach');
+      if (command.donations + command.recruitment > 1) blocked.push('Audience allocation cannot exceed one');
     } else if (command?.type === 'setFounderTask') {
       object({ type: choice(['setFounderTask']), jobId: (value, path) => { if (value !== null) id(value, path); } })(command, 'command');
       if (command.jobId !== null) {
@@ -121,6 +125,10 @@ export function dispatch(game, definitions, balance, command) {
     case 'setFounderTask':
       game.state.population.founder.task = command.jobId ?? 'idle';
       eventId = command.jobId ?? 'idle';
+      break;
+    case 'setAudienceAllocation':
+      game.state.preferences.audience = { donations: command.donations, recruitment: command.recruitment };
+      eventId = 'audience';
       break;
     case 'setJobPriority': {
       const job = game.state.jobs.find(item => item.id === command.jobId);

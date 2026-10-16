@@ -9,9 +9,15 @@ const cost = dictionary(choice(resourceIds), nonnegative);
 /** @type {import('./schema.js').Rule} */
 const gate = (value, path) => {
   record(value, path);
-  const { autoUnlock, ...required } = value;
+  const { autoUnlock, condition, journalTarget, ...required } = value;
   object({ id, prerequisites })(required, path);
   if (Object.hasOwn(value, 'autoUnlock')) boolean(autoUnlock, `${path}.autoUnlock`);
+  if (Object.hasOwn(value, 'journalTarget')) id(journalTarget, `${path}.journalTarget`);
+  if (Object.hasOwn(value, 'condition')) {
+    record(condition, `${path}.condition`);
+    if (condition.kind === 'evidence') object({ kind: choice(['evidence']), targetId: id, quantity: nonnegative })(condition, `${path}.condition`);
+    else object({ kind: choice(['interest']), quantity: nonnegative })(condition, `${path}.condition`);
+  }
 };
 const flows = dictionary(choice(stockIds), nonnegative);
 /** @type {import('./schema.js').Rule} */
@@ -21,11 +27,24 @@ const workRequired = (value, path) => {
     requireValid(typeof value === 'number' && value > 0, path, 'completion work must be positive');
   }
 };
-const recipe = object({
+const recipeFields = object({
   id, name: text, prerequisites, inputs: flows, outputs: flows, capacity: nonnegative,
   stat: choice([null, 'observing.capacity', 'analysis.capacity', 'outreach.capacity']),
   requiresFounder: boolean, compatibleInstruments: array(id), workRequired,
 });
+/** @type {import('./schema.js').Rule} */
+const recipe = (value, path) => {
+  record(value, path);
+  const { activity, ...required } = value;
+  recipeFields(required, path);
+  if (!Object.hasOwn(value, 'activity')) return;
+  record(activity, `${path}.activity`);
+  if (activity.kind === 'observe') object({ kind: choice(['observe']), targetId: id, mode: choice(['visual', 'camera']), dataPerWork: nonnegative })(activity, `${path}.activity`);
+  else if (activity.kind === 'analyze') object({ kind: choice(['analyze']), targetId: id, dataPerWork: nonnegative })(activity, `${path}.activity`);
+  else if (activity.kind === 'outreach') object({ kind: choice(['outreach']), interestCap: nonnegative })(activity, `${path}.activity`);
+  else object({ kind: choice(['donations']), fundingPerInterest: nonnegative })(activity, `${path}.activity`);
+  if ('dataPerWork' in activity) requireValid(typeof activity.dataPerWork === 'number' && activity.dataPerWork > 0, path, 'dataPerWork must be positive');
+};
 const resource = object({
   id: choice(resourceIds), name: text,
   kind: choice(['stock', 'typedInventory', 'population', 'achievement', 'legacy']),
@@ -95,12 +114,11 @@ export function validateDefinitions(input) {
   }
   for (const key of dependencies.keys()) visit(key);
 
-  for (const item of definitions.recipes) {
-    for (const ref of item.prerequisites) requireValid(dependencies.has(ref), item.id, `missing prerequisite ${ref}`);
-    for (const ref of item.compatibleInstruments) requireValid(definitions.instruments.some(i => i.id === ref), item.id, `unknown compatible instrument ${ref}`);
-  }
-
   const targets = new Set(definitions.targets.map(target => target.id));
+  for (const item of definitions.gates) {
+    if (item.journalTarget) requireValid(targets.has(item.journalTarget), item.id, 'unknown journal target');
+    if (item.condition?.kind === 'evidence') requireValid(targets.has(item.condition.targetId), item.id, 'unknown milestone target');
+  }
   for (const instrument of definitions.instruments) {
     requireValid(new Set(instrument.tasks).size === instrument.tasks.length, instrument.id, 'duplicate task');
     for (const task of instrument.tasks) requireValid(targets.has(task), instrument.id, `missing target ${task}`);
@@ -108,6 +126,17 @@ export function validateDefinitions(input) {
   }
   for (const target of definitions.targets) {
     requireValid(definitions.instruments.some(i => i.id === target.requiredInstrument && i.tasks.includes(target.id)), target.id, 'missing or incompatible required instrument');
+  }
+  for (const item of definitions.recipes) {
+    for (const ref of item.prerequisites) requireValid(dependencies.has(ref), item.id, `missing prerequisite ${ref}`);
+    for (const ref of item.compatibleInstruments) requireValid(definitions.instruments.some(i => i.id === ref), item.id, `unknown compatible instrument ${ref}`);
+    if (item.activity?.kind === 'observe' || item.activity?.kind === 'analyze') {
+      const activity = item.activity;
+      requireValid(definitions.targets.some(target => target.id === activity.targetId), item.id, 'unknown activity target');
+      if (activity.kind === 'observe') {
+        requireValid(item.compatibleInstruments.length > 0 && item.compatibleInstruments.every(ref => definitions.instruments.some(instrument => instrument.id === ref && instrument.tasks.includes(activity.targetId))), item.id, 'observation requires compatible target instruments');
+      }
+    }
   }
   for (const item of definitions.upgrades) {
     requireValid(item.maxLevel > 0 && item.maxLevel <= 1000, item.id, 'maxLevel must be 1–1000');

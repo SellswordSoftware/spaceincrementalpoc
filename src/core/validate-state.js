@@ -11,13 +11,13 @@ const stateSchema = object({
   resources: object({ F: nonnegative, K: nonnegative, I: nonnegative, X: nonnegative, E: nonnegative, C: nonnegative }),
   institution: object({ instruments: array(object({ id, definitionId: id })), upgrades: levels }),
   population: object({ founder: object({ task: id }), groups: emptyArray }),
-  data: emptyArray,
+  data: array(object({ id, targetId: id, type: id, instrumentId: id, mode: choice(['visual', 'camera']), startTick: integer, endTick: integer, quantity: nonnegative, consumed: nonnegative })),
   jobs: array(object({ id, recipeId: id, instrumentId: (value, path) => { if (value !== null) id(value, path); }, allocation: nonnegative, priority: integer, progress: nonnegative })),
-  investigations: object({ evidence: emptyArray, activePrograms: emptyArray, completedPrograms: emptyArray }),
-  campaign: object({ upgrades: levels, publications: integer, scientificOutput: nonnegative }),
+  investigations: object({ evidence: array(object({ lotId: id, targetId: id, type: id, mode: choice(['visual', 'camera']), startTick: integer, endTick: integer, quantity: nonnegative, allocated: nonnegative })), activePrograms: emptyArray, completedPrograms: emptyArray }),
+  campaign: object({ upgrades: levels, publications: integer, scientificOutput: nonnegative, interestEarned: nonnegative }),
   lifetime: object({ journal: array(id), unlocked: array(id), claimedDepthBonuses: emptyArray }),
   legacy: object({ balance: integer, upgrades: levels, purchaseHistory: emptyArray }),
-  preferences: object({ assignments: emptyArray }), modified: boolean,
+  preferences: object({ assignments: emptyArray, audience: object({ donations: nonnegative, recruitment: nonnegative }) }), modified: boolean,
 });
 const envelopeSchema = object({
   schemaVersion: integer, contentVersion: text, balanceId: id, balanceHash: text,
@@ -50,6 +50,20 @@ export function validateGame(input, definitions = defaultDefinitions, balance = 
     requireValid(definitions.instruments.some(i => i.id === instrument.definitionId), instrument.id, 'unknown instrument definition');
   }
   requireValid(instruments.some(i => i.id === 'founding-telescope' && i.definitionId === 'starter-refractor'), 'institution.instruments', 'founding telescope must be retained');
+  requireValid(state.preferences.audience.donations + state.preferences.audience.recruitment <= 1, 'preferences.audience', 'audience overallocated');
+  requireValid(new Set(state.data.map(lot => lot.id)).size === state.data.length, 'data', 'duplicate lot ID');
+  for (const lot of state.data) {
+    const target = definitions.targets.find(target => target.id === lot.targetId);
+    requireValid(target && target.dataType === lot.type, lot.id, 'unknown target or incorrect data type');
+    requireValid(instruments.some(instrument => instrument.id === lot.instrumentId && definitions.instruments.some(definition => definition.id === instrument.definitionId && definition.tasks.includes(lot.targetId))), lot.id, 'incompatible source instrument');
+    requireValid(lot.consumed <= lot.quantity + 1e-9 && lot.startTick < lot.endTick && lot.endTick <= state.clock.tick, lot.id, 'invalid data quantity or interval');
+  }
+  requireValid(new Set(state.investigations.evidence.map(item => item.lotId)).size === state.investigations.evidence.length, 'evidence', 'duplicate source lot');
+  for (const evidence of state.investigations.evidence) {
+    const lot = state.data.find(lot => lot.id === evidence.lotId);
+    requireValid(lot && lot.targetId === evidence.targetId && lot.type === evidence.type && lot.mode === evidence.mode, evidence.lotId, 'invalid evidence provenance');
+    requireValid(evidence.quantity <= lot.consumed + 1e-9 && evidence.allocated <= evidence.quantity && evidence.startTick === lot.startTick && evidence.endTick <= lot.endTick && evidence.endTick > evidence.startTick, evidence.lotId, 'invalid evidence quantity or interval');
+  }
 
   requireValid(new Set(state.jobs.map(job => job.id)).size === state.jobs.length, 'jobs', 'duplicate job ID');
   for (const job of state.jobs) {

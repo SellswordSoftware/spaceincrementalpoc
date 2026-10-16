@@ -33,7 +33,7 @@ exactly pinned development dependencies; there are no runtime dependencies or
 bundler.
 
 Browser smoke checklist: start the server, open the URL, and confirm that the
-status reads “P2 — Simulation kernel: starter state ready (25 Funding, one founder, one telescope).” Check
+status reads “P3 — Starter economy: starter state ready (25 Funding, one founder, one telescope).” Check
 that there are no browser errors or failed module/style requests, then reload
 and confirm the same result.
 
@@ -47,9 +47,10 @@ validation, starter content definitions, fixture A, and canonical save/load.
 The browser creates the same starter state as Node.
 
 P2 adds fixed ticks, shared-input reservations, atomic commands, rate summaries,
-and events. The default recipe list is empty: P3 adds the reachable starter
-economy. P4 adds playable controls. Simulation/sweep commands and reports arrive
-in later packages.
+and events. P3 adds the reachable starter economy, typed observation lots and
+analysis evidence, outreach/donations, tracking, reflector, camera, and workstation.
+Next is **P4: plain playable browser controls**. General simulation/sweep commands
+and reports arrive in later packages.
 
 ## Definitions and saves
 
@@ -85,8 +86,8 @@ Validation rejects invalid references, dependency cycles, unsupported effects,
 bad persistence classes, nonfinite/negative stocks and costs, invalid counts,
 unknown fields, and out-of-bounds upgrade levels. Permanent, campaign, and
 Legacy upgrade levels occupy distinct state partitions. Population groups,
-typed data, evidence, programs, Legacy purchase history, and preference arrays
-remain empty until their corresponding subsystems are implemented.
+programs, Legacy purchase history, and assignment preference arrays remain empty
+until their corresponding subsystems are implemented.
 
 P1 findings: definition acyclicity and save integrity do not prove economic
 reachability. The first executable progression check belongs to P3.
@@ -107,8 +108,8 @@ console.log(getSummary(game, definitions, balance));
 // });
 ```
 
-Commands available in P2: `buyUpgrade`, `purchaseInstrument`, `setJobAllocation`,
-`setFounderTask`, and `setJobPriority`. A founder task selects a job ID, or `null`
+Commands available: `buyUpgrade`, `purchaseInstrument`, `setJobAllocation`,
+`setFounderTask`, `setJobPriority`, and `setAudienceAllocation`. A founder task selects a job ID, or `null`
 for idle. Recipe and instrument allocations share a capacity of one; a founder
 can work only on the selected job. Finite jobs preserve fractional progress,
 release allocation on completion, and emit one completion event. Legacy buying,
@@ -133,13 +134,62 @@ Shortages fund partial work without debt. Summaries show the next tick's actual
 gross/net rates, modifiers, and blocked reasons without advancing the game.
 Modifiers add level bonuses within a persistence category and multiply across
 categories. Only gates explicitly marked `autoUnlock` unlock from prerequisites;
-science milestones require their own accomplishments in P3 and later.
+science milestones have explicit evidence or audience conditions.
 
 P2 verification uses one small kernel scenario for atomic spending, snapshot
 reservations, priority, single completion, and matching chunked/save continuation.
 Its stock recipes are fixtures rather than game content. The initial browser
-shell remains idle until controls are implemented. Schema 2 and simulation
-`0.2.0-p2` intentionally reject the earlier prototype saves.
+shell remains idle until controls are implemented. Schema 3 and simulation
+`0.3.0-p3` intentionally reject the earlier prototype saves.
+
+## Starter economy (P3)
+
+Run the scripted progression using ordinary commands and simulated time:
+
+```sh
+npm run scenario:starter
+npm run scenario:starter -- --low-funding
+node --test test/starter.test.js test/simulation.test.js
+```
+
+The normal seed uses 25 Funding. The low-funding scenario starts with five, buys
+outreach, and reaches exactly zero; basal donations recover on the next tick.
+This is a reachable funding shortage, without debug resource edits. Both runs
+reach the processed-image milestone and retain the founding telescope on outreach.
+The scenario prints milestone times, resource totals, typed queues/evidence, and
+command count. It is a scripted path, not an optimized policy or balance verdict.
+
+The founder observes or analyzes, one task at a time. Moon observations yield
+typed lunar Data; processing ten completes the first record. A Jupiter record
+requires twenty compatible Data. Analysis produces 0.2 Knowledge per Data and
+linked evidence once. Repeating observations remains productive after journal
+completion. Continuous compatible acquisitions merge into lots with instrument,
+target, mode, quantity, observation interval, and consumed quantity; evidence
+retains the source lot. Time-series coverage is later work.
+
+Outreach uses allocated telescope time, competing with observations. This
+prototype abstracts the outreach operation without requiring the founder;
+once the reflector arrives, the founding telescope can support income while the
+founder operates the newer instrument. Public Interest grows at 0.1/s up to 100.
+Donations use the allocated audience without consuming it: 0.02 Funding/s per
+Interest plus 0.05/s basal support after outreach is purchased. Donation and
+recruitment shares total at most one; recruitment production arrives with P5.
+
+The mount improves observing utilization; tracking enables camera operation
+without repeated target correction. The reflector unlocks camera purchasing.
+Camera acquisition starts at four Data/s with a 0.05 Funding/s base budget;
+the workstation processes up to four Data/s at 0.05 Funding per Data.
+Mount utilization affects both acquisition and its active budget. Free slow
+self-analysis remains available if funded processing stalls. A first processed
+image requires 100 camera Data from the lunar imaging task, opening the next
+academy milestone without implementing the academy yet.
+
+Measured scripted baseline: **607.25 simulated seconds** to the first processed
+image with 25 starting Funding. This path collects a small Knowledge reserve
+before camera/workstation purchases. Prices and rates remain seed hypotheses;
+the complete prestige cycle is still needed to assess pacing. P3 adds one
+progression test covering image reachability, zero-F recovery, and saving the
+resulting data/evidence state; it reuses the existing kernel smoke test.
 
 See [the game design](eyes-on-the-universe-game-plan.md) and
 [the implementation plan](eyes-on-the-universe-prototype-implementation-plan.md)

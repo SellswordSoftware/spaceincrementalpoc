@@ -1,18 +1,53 @@
 import { resources } from './resources.js';
-import { instrumentCosts, upgradeTuning } from './balance.js';
+import { instrumentCosts, starterTuning as tuning, upgradeTuning } from './balance.js';
+
+/** @type {import('../core/types.js').RecipeDefinition} */
+const baseRecipe = { id: 'base', name: 'Base', prerequisites: [], inputs: {}, outputs: {},
+  capacity: 1, stat: null, requiresFounder: true, compatibleInstruments: [], workRequired: null };
 
 /** @type {import('../core/types.js').Definitions} */
 export const definitions = {
-  contentVersion: '0.2.0',
+  contentVersion: '0.3.0',
   resources,
-  recipes: [], // Starter economic recipes are added in P3.
+  recipes: [
+    { ...baseRecipe, id: 'observe-moon', name: 'Observe the Moon', prerequisites: ['backyard'],
+      capacity: tuning.observingRate, stat: 'observing.capacity', compatibleInstruments: ['starter-refractor', 'reflector'],
+      activity: { kind: 'observe', targetId: 'moon', mode: 'visual', dataPerWork: 1 } },
+    { ...baseRecipe, id: 'analyze-moon', name: 'Analyze lunar observations', prerequisites: ['backyard'],
+      capacity: tuning.analysisRate, stat: 'analysis.capacity', outputs: { K: tuning.knowledgePerData },
+      activity: { kind: 'analyze', targetId: 'moon', dataPerWork: 1 } },
+    { ...baseRecipe, id: 'observe-planet', name: 'Observe Jupiter', prerequisites: ['lunar-record'],
+      capacity: tuning.observingRate, stat: 'observing.capacity', compatibleInstruments: ['starter-refractor', 'reflector'],
+      activity: { kind: 'observe', targetId: 'bright-planet', mode: 'visual', dataPerWork: 1 } },
+    { ...baseRecipe, id: 'analyze-planet', name: 'Analyze Jupiter observations', prerequisites: ['lunar-record'],
+      capacity: tuning.analysisRate, stat: 'analysis.capacity', outputs: { K: tuning.knowledgePerData },
+      activity: { kind: 'analyze', targetId: 'bright-planet', dataPerWork: 1 } },
+    { ...baseRecipe, id: 'outreach-session', name: 'Telescope outreach', prerequisites: ['outreach'],
+      capacity: tuning.outreachRate, stat: 'outreach.capacity', requiresFounder: false,
+      compatibleInstruments: ['starter-refractor', 'reflector'], outputs: { I: 1 },
+      activity: { kind: 'outreach', interestCap: tuning.interestCap } },
+    { ...baseRecipe, id: 'donations', name: 'Supporter donations', prerequisites: ['outreach'],
+      requiresFounder: false, outputs: { F: tuning.basalDonations },
+      activity: { kind: 'donations', fundingPerInterest: tuning.fundingPerInterest } },
+    { ...baseRecipe, id: 'camera-lunar-image', name: 'Capture lunar images', prerequisites: ['camera', 'tracking'],
+      capacity: tuning.cameraRate, stat: 'observing.capacity', compatibleInstruments: ['reflector'],
+      inputs: { F: tuning.cameraFundingPerData },
+      activity: { kind: 'observe', targetId: 'lunar-image', mode: 'camera', dataPerWork: 1 } },
+    { ...baseRecipe, id: 'analyze-image-free', name: 'Self-analyze lunar images', prerequisites: ['camera'],
+      capacity: tuning.analysisRate, stat: 'analysis.capacity', outputs: { K: tuning.knowledgePerData },
+      activity: { kind: 'analyze', targetId: 'lunar-image', dataPerWork: 1 } },
+    { ...baseRecipe, id: 'analyze-image-workstation', name: 'Process lunar images at the workstation', prerequisites: ['workstation'],
+      capacity: tuning.workstationRate, stat: 'analysis.capacity', inputs: { F: tuning.workstationFundingPerData },
+      outputs: { K: tuning.knowledgePerData }, activity: { kind: 'analyze', targetId: 'lunar-image', dataPerWork: 1 } },
+  ],
   // Later gates reserve resource-reveal IDs, not implemented production systems.
   gates: [
     { id: 'backyard', prerequisites: [] },
-    { id: 'lunar-record', prerequisites: ['backyard'] },
-    { id: 'planet-record', prerequisites: ['backyard'] },
-    { id: 'outreach-milestone', prerequisites: ['outreach'] },
-    { id: 'academy', prerequisites: ['camera', 'workstation'] },
+    { id: 'lunar-record', prerequisites: ['backyard'], condition: { kind: 'evidence', targetId: 'moon', quantity: tuning.lunarData }, journalTarget: 'moon' },
+    { id: 'planet-record', prerequisites: ['lunar-record'], condition: { kind: 'evidence', targetId: 'bright-planet', quantity: tuning.planetData }, journalTarget: 'bright-planet' },
+    { id: 'outreach-milestone', prerequisites: ['outreach'], condition: { kind: 'interest', quantity: tuning.outreachMilestone } },
+    { id: 'image-record', prerequisites: ['camera'], condition: { kind: 'evidence', targetId: 'lunar-image', quantity: tuning.imageData }, journalTarget: 'lunar-image' },
+    { id: 'academy', prerequisites: ['image-record'] },
     { id: 'teams', prerequisites: ['academy'] },
     { id: 'first-publication', prerequisites: ['teams'] },
     { id: 'campaign-closure', prerequisites: ['first-publication'] },
@@ -23,7 +58,7 @@ export const definitions = {
     id: 'starter-refractor', name: '60 mm founding refractor',
     tasks: ['moon', 'bright-planet'], purchasePrerequisites: [], cost: instrumentCosts['starter-refractor'],
   }, {
-    id: 'reflector', name: '150–200 mm reflector', tasks: ['moon', 'bright-planet'],
+    id: 'reflector', name: '150–200 mm reflector', tasks: ['moon', 'bright-planet', 'lunar-image'],
     purchasePrerequisites: ['tracking', 'outreach-milestone'], cost: instrumentCosts.reflector,
   }],
   targets: [
@@ -35,6 +70,9 @@ export const definitions = {
       requiredInstrument: 'starter-refractor',
       sourceNote: 'Design plan section 7.1: a bright planet follows the lunar record.',
       permittedClaim: 'Recorded an observation of Jupiter.' },
+    { id: 'lunar-image', name: 'Lunar camera image', fictional: false, dataType: 'processed-image',
+      requiredInstrument: 'reflector', sourceNote: 'Implementation plan section 8: first image is 100 camera Data processed; Moon chosen as the starter imaging target.',
+      permittedClaim: 'Processed a camera image of the Moon.' },
   ],
   upgrades: [
     { ...upgradeTuning.outreach, id: 'outreach', name: 'Share the sky', persistence: 'permanentMethod',

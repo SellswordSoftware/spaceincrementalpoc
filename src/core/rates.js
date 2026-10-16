@@ -43,6 +43,8 @@ export function getJobRate(game, definitions, job) {
   if (recipe.compatibleInstruments.length > 0) {
     const instrument = game.state.institution.instruments.find(item => item.id === job.instrumentId);
     if (!instrument || !recipe.compatibleInstruments.includes(instrument.definitionId)) blockedReasons.push('Requires a compatible instrument');
+    const activity = recipe.activity;
+    if (activity?.kind === 'observe' && instrument && !definitions.instruments.find(item => item.id === instrument.definitionId)?.tasks.includes(activity.targetId)) blockedReasons.push('Instrument cannot observe this target');
   }
   if (recipe.workRequired !== null && job.progress >= recipe.workRequired) blockedReasons.push('Completed');
   const modifier = recipe.stat ? explainModifier(game, definitions, recipe.stat) : null;

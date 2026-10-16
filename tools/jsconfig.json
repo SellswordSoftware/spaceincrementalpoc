@@ -4,5 +4,5 @@
     "lib": ["ES2023"],
     "types": ["node"]
   },
-  "include": ["./**/*.js", "../test/**/*.js", "../src/core/**/*.js"]
+  "include": ["./**/*.js", "../test/**/*.js", "../scenarios/**/*.js", "../src/core/**/*.js"]
 }

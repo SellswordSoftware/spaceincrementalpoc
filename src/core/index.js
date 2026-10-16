@@ -1,8 +1,8 @@
 // This entry point must remain usable in both Node and the browser.
-// Economic recipes arrive in P3.
+// Playable browser controls arrive in P4.
 export const prototypeInfo = Object.freeze({
   title: 'Eyes on the Universe',
-  stage: 'P2 — Simulation kernel',
+  stage: 'P3 — Starter economy',
 });
 
 export { definitions } from '../definitions/content.js';

@@ -1,4 +1,4 @@
-// Seed fixture A, not measured game balance. Rates and recipes arrive in P3.
+// Seed fixture A, not measured game balance.
 /** @type {import('../core/types.js').Balance} */
 export const balance = {
   id: 'starter-v1',
@@ -7,7 +7,7 @@ export const balance = {
 };
 
 // Purchase/effect seeds are assembled into definitions, which are also fingerprinted
-// in saves. They describe effects; executing purchases/effects starts in P2/P3.
+// in saves.
 /** @type {Record<string, Pick<import('../core/types.js').UpgradeDefinition, 'maxLevel'|'cost'|'effects'>>} */
 export const upgradeTuning = {
   outreach: { maxLevel: 1, cost: { base: { F: 5, K: 1 }, growth: 1 }, effects: [{ kind: 'unlock', capability: 'outreach' }] },
@@ -20,3 +20,11 @@ export const upgradeTuning = {
 
 /** @type {Record<string, Partial<Record<import('../core/types.js').ResourceId, number>>>} */
 export const instrumentCosts = { 'starter-refractor': {}, reflector: { F: 100 } };
+
+export const starterTuning = {
+  observingRate: 1, analysisRate: 1, knowledgePerData: 0.2,
+  outreachRate: 0.1, interestCap: 100, basalDonations: 0.05, fundingPerInterest: 0.02,
+  cameraRate: 4, cameraFundingPerData: 0.0125,
+  workstationRate: 4, workstationFundingPerData: 0.05,
+  lunarData: 10, planetData: 20, imageData: 100, outreachMilestone: 10,
+};
