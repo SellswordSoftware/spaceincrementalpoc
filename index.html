@@ -3,100 +3,64 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Eyes on the Universe — Prototype</title>
+  <title>Eyes on the Universe — Stations</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/styles.css">
   <script type="module" src="/src/ui/app.js"></script>
 </head>
 <body>
 <main>
-  <header>
-    <p class="eyebrow">Observatory field notes · numerical prototype</p>
-    <h1>Eyes on the Universe</h1>
-    <p>One telescope. An expanding view.</p>
+  <header class="masthead">
+    <div><p class="eyebrow">Field notes / independent stations</p><h1>Eyes on the Universe</h1><p class="intro">Gather light. Share what you learn. Build something that lasts.</p></div>
+    <div class="seal" aria-hidden="true">✦<span>EST. 01<br>BACKYARD OBSERVATORY</span></div>
   </header>
-  <noscript><p>Enable JavaScript to play this prototype.</p></noscript>
-  <section aria-label="Simulation controls" class="controls">
-    <strong id="clock">00:00.00</strong><span id="runtime-status">Loading…</span>
-    <button id="pause" type="button">Run</button>
-    <label>Speed <select id="speed"><option value="1">1×</option><option value="5">5×</option><option value="20">20×</option></select></label>
-    <button id="step" type="button">Step 0.25 s</button>
-    <button id="advance-10" type="button">+10 s</button>
-    <button id="advance-60" type="button">+60 s</button>
+  <noscript>Enable JavaScript to play.</noscript>
+  <aside id="old-save" class="save-notice" hidden>
+    <h2>Your previous prototype save is safe</h2>
+    <p id="old-save-message">This version uses a different station economy. Your previous save stays untouched until you deliberately start a new run.</p>
+    <button id="export-old">Export previous save</button>
+    <button id="start-new">Start station prototype</button>
+  </aside>
+  <section class="utilities" aria-label="Prototype time controls">
+    <strong id="run-label">Run 1</strong><strong id="clock">00:00</strong><span id="runtime-status">Live</span>
+    <button id="review-prestige" hidden>Review prestige</button>
+    <button id="pause">Pause</button>
+    <div class="speed-buttons" aria-label="Simulation speed"><button data-speed="1" aria-pressed="true">1×</button><button data-speed="5" aria-pressed="false">5×</button><button data-speed="20" aria-pressed="false">20×</button></div>
+    <button id="advance-10">+10 s</button><button id="advance-60">+60 s</button>
   </section>
-  <p id="message" role="status" aria-live="polite">Choose a founder task to begin. Time starts paused.</p>
-  <section class="objective" aria-labelledby="objective-heading"><h2 id="objective-heading">Next objective</h2><p id="objective"></p></section>
-  <section aria-labelledby="resources-heading">
-    <h2 id="resources-heading">Resources</h2>
-    <div class="table-wrap"><table><caption class="sr-only">Resource stocks and rates per simulated second</caption>
-      <thead><tr><th scope="col">Resource</th><th scope="col">Stock</th><th scope="col">Gross /s</th><th scope="col">Use /s</th><th scope="col">Net /s</th></tr></thead><tbody id="resources"></tbody>
-    </table></div>
-  </section>
-  <div class="workspace">
-    <section aria-labelledby="founder-heading">
-      <h2 id="founder-heading">Founder’s work</h2><p id="current-task"></p>
-      <form id="founder-form">
-        <label>Task <select id="task"></select></label>
-        <label>Instrument <select id="instrument"></select></label>
-        <label>Work allocation <input id="allocation" type="number" min="0" max="1" step="0.1" value="1" required></label>
-        <button type="submit">Assign founder</button>
-      </form>
-      <p id="task-help" class="note"></p>
-      <p class="note">The founder observes or analyzes, one task at a time. Assigning an instrument to a new task stops its previous task.</p>
-    </section>
-    <section aria-labelledby="infrastructure-heading">
-      <h2 id="infrastructure-heading">Infrastructure</h2><ul id="instruments"></ul>
-      <div class="table-wrap"><table><caption class="sr-only">Available purchases, costs, and requirements</caption>
-        <thead><tr><th scope="col">Investment</th><th scope="col">Cost</th><th scope="col">Availability</th></tr></thead><tbody id="purchases"></tbody>
-      </table></div>
-      <p id="purchases-empty" class="note">Your first lunar record opens outreach.</p>
-    </section>
-  </div>
-  <section aria-labelledby="data-heading">
-    <h2 id="data-heading">Observation desk</h2>
-    <div class="table-wrap"><table><caption class="sr-only">Typed raw data queues and processed evidence</caption>
-      <thead><tr><th scope="col">Target</th><th scope="col">Queued Data</th><th scope="col">Evidence</th><th scope="col">Acquire /s</th><th scope="col">Process /s</th></tr></thead><tbody id="data"></tbody>
-    </table></div>
-    <p class="note">Observe first, then switch to analysis. Analysis consumes Data and produces Knowledge plus evidence. Repeated observations remain useful.</p>
-    <ul id="milestones" class="milestones"></ul>
-  </section>
-  <section id="outreach-panel" aria-labelledby="outreach-heading" hidden>
-    <h2 id="outreach-heading">Share the sky</h2><p id="outreach-status"></p>
-    <form id="outreach-form">
-      <label>Outreach instrument <select id="outreach-instrument"></select></label>
-      <label>Instrument allocation <input id="outreach-allocation" type="number" min="0" max="1" step="0.1" value="1" required></label>
-      <button type="submit">Assign outreach</button><button id="stop-outreach" type="button">Stop outreach</button>
-    </form>
-    <form id="audience-form">
-      <label>Audience for donations (%) <input id="donation-share" type="number" min="0" max="100" step="1" value="100" required></label>
-      <button type="submit">Allocate audience</button>
-    </form>
-    <p class="note">Outreach uses telescope time without founder time. Donations retain the audience; unallocated audience is idle. Basal support continues even at zero Funding.</p>
-  </section>
-  <details>
-    <summary>Operations & rate details</summary>
-    <div class="table-wrap"><table><caption class="sr-only">Work, budgets, outputs, and shortages by job</caption>
-      <thead><tr><th scope="col">Activity</th><th scope="col">Work /s</th><th scope="col">Funding /s</th><th scope="col">Outputs /s</th><th scope="col">Status / modifiers</th></tr></thead><tbody id="jobs"></tbody>
-    </table></div>
-    <form id="priority-form">
-      <label>Job <select id="priority-job"></select></label>
-      <label>Priority <input id="priority-value" type="number" min="0" step="1" value="0" required></label>
-      <button type="submit">Set priority</button>
-    </form>
-    <p class="note">Higher priority reserves scarce inputs first. Equal priorities use job ID order. Outputs are available next tick. Rates describe current inputs, not an estimated completion time.</p>
-  </details>
-  <div class="workspace">
-    <section aria-labelledby="journal-heading"><h2 id="journal-heading">Sky journal</h2><ul id="journal"><li>No records yet.</li></ul></section>
-    <section aria-labelledby="events-heading"><h2 id="events-heading">Recent activity</h2><ol id="events" reversed><li>New observing campaign.</li></ol></section>
-  </div>
-  <footer>
-    <div class="controls">
-      <button id="export" type="button">Export save</button>
-      <label>Import save <input id="import" type="file" accept=".json,application/json"></label>
-      <button id="restart" type="button">Restart prototype</button>
+  <p id="insight-modifiers" class="small" hidden></p>
+  <section id="balances" class="balances" aria-label="Revealed resources"></section>
+  <div class="next-step"><span class="eyebrow">Next unlock</span><p id="objective"></p></div>
+  <p class="optional-suggestion"><strong>Optional investment:</strong> <span id="suggestion"></span></p>
+  <p id="message" role="status" aria-live="polite">Click or hold Observe. Establish an observing routine to keep gathering Data on its own.</p>
+  <section id="prestige-panel" class="prestige-panel" aria-labelledby="prestige-heading" hidden>
+    <p class="eyebrow">A new perspective</p><h2 id="prestige-heading">Prestige</h2>
+    <div id="prestige-review">
+      <p id="prestige-reward" class="prestige-reward"></p>
+      <p id="prestige-requirements"></p><p id="prestige-payout" class="small"></p>
+      <p><strong>The entire ordinary run resets.</strong> Rebuild every station, target unlock, telescope,
+      equipment upgrade, qualification and staff appointment. Discoveries, Publications and grants reset too.</p>
+      <p id="prestige-losses"></p><p id="prestige-work-loss" class="small"></p>
+      <p>Only your Insight upgrades and unspent Insight carry over. The next run starts
+      with the free backyard telescope, the Moon and empty resource balances.</p>
+      <div class="utilities"><button id="confirm-prestige">Reset run and earn Insight</button><button id="keep-run">Keep this run</button><button id="export-before-prestige">Export this run first</button></div>
     </div>
-    <p id="save-status" class="note">Saves stay in this browser. Export JSON for a portable copy. No offline progress.</p>
-    <p class="note">Starter slice · academy and staff are the next implementation package.</p>
+    <div id="insight-shop" hidden>
+      <p id="insight-wallet" class="prestige-reward"></p><p id="insight-shop-info"></p>
+      <div id="insight-upgrades" class="insight-grid"></div>
+      <button id="start-next-run" class="start-next-run">Begin next run</button>
+      <p class="small">Purchases are permanent. Unspent Insight stays available at your next prestige. Insight upgrades can only be bought between runs.</p>
+    </div>
+  </section>
+  <div id="stations" class="stations"></div>
+  <section id="journal-section" class="journal-section" aria-labelledby="journal-heading">
+    <div><p class="eyebrow">A growing record</p><h2 id="journal-heading">Sky journal</h2><ul id="journal"><li>Your next discovery is waiting.</li></ul></div>
+    <div><p class="eyebrow">Around the observatory</p><h2>Recent activity</h2><ol id="events" reversed><li>A new observing campaign.</li></ol></div>
+  </section>
+  <footer>
+    <div class="utilities"><button id="export">Export save</button><label class="import-label">Import save<input id="import" type="file" accept=".json,application/json"></label><button id="restart">Restart prototype</button></div>
+    <p id="save-status">Saved in this browser. Export for a portable copy. No offline progress.</p>
+    <p>Prototype through full-reset Insight prestige · rebuild the whole network with permanent global modifiers.</p>
   </footer>
 </main>
 </body>

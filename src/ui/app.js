@@ -1,346 +1,408 @@
-import { advanceTicks, balance, createGame, definitions, deserializeGame, dispatch, explainModifier, getSummary, quoteCommand, TICK_SECONDS } from '../core/index.js';
-import { getUpgradeLevel, hasPrerequisite } from '../core/rates.js';
-import { exportGame, loadGame, saveGame } from './storage.js';
+import { advanceTicks, balance, createGame, definitions, deserializeGame, dispatch, getSummary, quoteCommand, TICK_SECONDS } from '../core/index.js';
+import { getPurchaseCount, hasPrerequisite, scaledOutput, analysisYield, previewInvestment, insightMultiplier } from '../core/rates.js';
+import { currencyName } from '../core/commands.js';
+import { backupPreviousSave, downloadSave, exportGame, loadGame, saveGame, storedSave } from './storage.js';
 
 /** @param {string} id */
-function element(id) {
-  const node = document.getElementById(id);
-  if (!node) throw new Error(`Missing interface element: ${id}`);
+function el(id) { const node=document.getElementById(id); if (!node) throw new Error(`Missing ${id}`); return node; }
+/** @param {ParentNode} scope @param {string} selector */
+function q(scope,selector) {
+  const node=scope.querySelector(selector);
+  if (!(node instanceof HTMLElement)) throw new Error(`Missing ${selector}`);
   return node;
 }
-const task = /** @type {HTMLSelectElement} */ (element('task'));
-const instrument = /** @type {HTMLSelectElement} */ (element('instrument'));
-const outreachInstrument = /** @type {HTMLSelectElement} */ (element('outreach-instrument'));
-const priorityJob = /** @type {HTMLSelectElement} */ (element('priority-job'));
-const speedInput = /** @type {HTMLSelectElement} */ (element('speed'));
-/** @param {string} id */
-const number = id => Number(/** @type {HTMLInputElement} */ (element(id)).value);
 /** @param {number} value */
-const format = value => value.toLocaleString(undefined, { maximumFractionDigits: 2 });
-/** @param {number} seconds */
-const time = seconds => `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${(seconds % 60).toFixed(2).padStart(5, '0')}`;
-/** @param {string} id */
-const name = id => definitions.upgrades.find(item => item.id === id)?.name
-  ?? definitions.instruments.find(item => item.id === id)?.name
-  ?? definitions.recipes.find(item => item.id === id)?.name
-  ?? ({ 'lunar-record': 'Lunar record', 'planet-record': 'Jupiter record', 'outreach-milestone': '10 cumulative Interest', 'image-record': 'First processed image', backyard: 'Backyard' })[id] ?? id;
-/** @param {string} reason */
-const reason = reason => reason.startsWith('Requires ') ? `Requires ${name(reason.slice(9))}`
-  : reason.replace('Insufficient F', 'Insufficient Funding').replace('Insufficient K', 'Insufficient Knowledge');
-/** @param {string} id */
-const statName = id => ({ 'observing.capacity': 'observing utilization', 'analysis.capacity': 'analysis throughput', 'outreach.capacity': 'outreach capacity' })[id] ?? id;
-/** @param {string} id */
-const capabilityName = id => ({ outreach: 'outreach and donations', tracking: 'motorized tracking', imaging: 'camera imaging', fundedAnalysis: 'funded workstation analysis' })[id] ?? id;
+const fmt = value => value.toLocaleString(undefined,{maximumFractionDigits:2});
+/** @param {import('../core/types.js').Costs} costs */
+const price = costs => Object.entries(costs).map(([key,value]) => `${fmt(value)} ${key==='N'&&value===1?'unassigned person':currencyName(definitions,key)}`).join(' + ');
 /** @param {string} text @param {boolean} [error] */
-function message(text, error = false) {
-  element('message').textContent = text;
-  element('message').classList.toggle('error', error);
-}
+function message(text,error=false) { el('message').textContent=text; el('message').classList.toggle('error',error); }
+/** @param {string[]} requires */
+const meets = requires => requires.every(id => hasPrerequisite(game,id));
 
-let game = createGame();
-let saveEnabled = true;
-try {
-  const stored = loadGame();
-  if (stored) { game = stored; message('Observing campaign restored. Time is paused.'); }
-} catch (error) {
-  saveEnabled = false;
-  message(`Stored save could not load: ${error instanceof Error ? error.message : error}. Start a new campaign or import a compatible save.`, true);
-}
-let running = false;
-let speed = 1;
-let accumulator = 0;
-let lastFrame = performance.now();
-let lastRender = 0;
-let lastSave = 0;
-let measuredAt = lastFrame;
-let measuredTicks = 0;
-/** @type {number|null} */
-let actualSpeed = null;
+let game=createGame();
+let running=true;
+let reviewingPrestige=false;
+let resumeAfterReview=false;
+let speed=1;
+let accumulator=0;
+let lastFrame=performance.now();
+let lastRender=0;
+let lastSave=performance.now();
+let saveEnabled=true;
+let oldSave='';
+let awaitingNewRun=false;
+/** @type {string|null} */
+let heldAction=null;
 /** @type {import('../core/types.js').GameEvent[]} */
-let recentEvents = [];
-
-function persist() {
-  if (!saveEnabled) return;
-  try {
-    saveGame(game);
-    element('save-status').textContent = 'Saved in this browser. Export JSON for a portable copy. No offline progress.';
-  } catch (error) {
-    element('save-status').textContent = `Local save unavailable: ${error instanceof Error ? error.message : error}. Export JSON to keep your progress.`;
-  }
-  lastSave = performance.now();
+let recentEvents=[];
+try {
+  const restored=loadGame();
+  if (restored) { game=restored; running=false; message(game.state.insight.phase==='shop'?'Insight shop restored. Choose modifiers, then begin the next run.':'Station network restored. Press Run to continue.'); }
+} catch (error) {
+  running=false; saveEnabled=false;
+  try { oldSave=storedSave() ?? ''; } catch { /* Browser storage may be unavailable. */ }
+  awaitingNewRun=Boolean(oldSave);
+  el('old-save').hidden=!awaitingNewRun;
+  if (awaitingNewRun) el('old-save-message').textContent=`${error instanceof Error ? error.message : 'Previous save could not load.'} Your previous save remains untouched. Export it, then start the station prototype when ready.`;
+  message(awaitingNewRun ? 'Export your previous save or start the new station economy above.' : 'Local storage is unavailable. You can still play and export your run.',true);
 }
+
 /** @param {import('../core/types.js').GameEvent[]} events */
 function record(events) {
-  recentEvents = [...events].reverse().concat(recentEvents).slice(0, 30);
+  recentEvents=[...events,...recentEvents].slice(0,20);
+  if (events.some(event => event.type==='graduate' || event.type==='record' || event.type==='publication')) message(events.find(event => event.type==='graduate' || event.type==='record' || event.type==='publication')?.detail ?? 'Milestone completed.');
 }
-/** @param {import('../core/types.js').Command} command */
-function send(command) {
-  const result = dispatch(game, definitions, balance, command);
-  if (!result.ok) throw new Error(result.blockedReasons.map(reason).join('; '));
+function persist() {
+  if (!saveEnabled) return;
+  try { saveGame(game); el('save-status').textContent='Saved in this browser. Reload resumes paused. Export for a portable copy. No offline progress.'; }
+  catch { el('save-status').textContent='Local saving is unavailable. Export JSON to keep this run.'; }
+  lastSave=performance.now();
+}
+/** @param {import('../core/types.js').Command} command @param {boolean} [quiet] */
+function send(command,quiet=false) {
+  if (awaitingNewRun) return;
+  const result=dispatch(game,definitions,balance,command);
+  if (!result.ok) { if (!quiet) message(result.blockedReasons.join(' · '),true); return; }
+  if (command.type==='beginPrestige') {
+    stopHold(); running=false; accumulator=0; reviewingPrestige=false; recentEvents=[];
+  } else if (command.type==='startNextRun') {
+    stopHold(); running=true; accumulator=0; reviewingPrestige=false;
+  }
   record(result.events);
-  saveEnabled = true;
+  if (!quiet && command.type!=='performStationAction') {
+    if (command.type==='beginPrestige') message(`Earned ${game.state.insight.lastAward} Insight. Choose permanent modifiers before rebuilding.`);
+    else if (command.type==='buyInsightUpgrade') message('Permanent Insight modifier purchased.');
+    else if (command.type==='startNextRun') message(`Run ${game.state.clock.campaignIndex} begins. Rebuild with your permanent Insight modifiers.`);
+    else if (command.type==='buyInvestment') message(`${definitions.investments.find(item => item.id===command.investmentId)?.name}: added to the network.`);
+    else if (command.type==='processData') message(`Processed ${fmt(command.quantity)} Data → ${fmt(command.quantity*analysisYield(game,definitions,balance))} Knowledge. Observations continue.`);
+    else if (command.type==='startProgram') message('Scientific study paid in full. Publication work is underway.');
+    else message('Course paid in full. Teaching is underway.');
+  }
+  if (!quiet) { persist(); render(); }
 }
-/** @param {() => void} action @param {string} success */
-function act(action, success) {
-  try { action(); message(success); persist(); }
-  catch (error) { message(error instanceof Error ? error.message : String(error), true); }
+/** @param {number} ticks */
+function advance(ticks) {
+  if (awaitingNewRun || reviewingPrestige || game.state.insight.phase==='shop') return;
+  if (!heldAction) record(advanceTicks(game,definitions,balance,ticks).events);
+  else for (let index=0;index<ticks;index++) {
+    send({type:'performStationAction',actionId:heldAction},true);
+    record(advanceTicks(game,definitions,balance,1).events);
+  }
+}
+function stopHold() {
+  heldAction=null;
+  document.querySelectorAll('.is-held').forEach(node => node.classList.remove('is-held'));
+}
+/** @param {string} actionId */
+function startHold(actionId) {
+  if (awaitingNewRun || reviewingPrestige || game.state.insight.phase==='shop') return;
+  const action=definitions.actions.find(item => item.id===actionId);
+  if (!action || !meets(action.requires) || action.output.training && !game.state.course || action.output.science && !game.state.science.program) return;
+  stopHold(); heldAction=actionId; running=true;
+  q(document,`[data-action="${actionId}"]`)?.classList.add('is-held');
+  send({type:'performStationAction',actionId},true);
   render();
 }
-/** Pause displaced jobs through the same commands used by the headless scenario.
- * @param {string} recipeId @param {string|null} selectedInstrument @param {number} allocation
- */
-function assign(recipeId, selectedInstrument, allocation) {
-  const recipe = definitions.recipes.find(item => item.id === recipeId);
-  if (!recipe) throw new Error('Choose an available task');
-  for (const job of game.state.jobs) {
-    const other = definitions.recipes.find(item => item.id === job.recipeId);
-    if (job.id !== recipeId && job.allocation > 0 && (selectedInstrument !== null && job.instrumentId === selectedInstrument || recipe.requiresFounder && other?.requiresFounder)) {
-      send({ type: 'setJobAllocation', jobId: job.id, recipeId: job.recipeId, allocation: 0 });
-    }
-  }
-  send({ type: 'setJobAllocation', jobId: recipeId, recipeId, instrumentId: selectedInstrument, allocation });
-  if (recipe.requiresFounder) send({ type: 'setFounderTask', jobId: recipeId });
-}
-/** @param {number} count */
-function advance(count) { record(advanceTicks(game, definitions, balance, count).events); }
 
-// Keep controls in place while counters refresh, preserving focus and unfinished edits.
-/** @param {HTMLSelectElement} select @param {{id:string, name:string}[]} options */
-function options(select, options) {
-  const key = JSON.stringify(options);
-  if (select.dataset.options === key) return;
-  const previous = select.value;
-  select.replaceChildren(...options.map(item => new Option(item.name, item.id)));
-  if (options.some(item => item.id === previous)) select.value = previous;
-  select.dataset.options = key;
-}
-/** @type {Map<string, Map<string, HTMLTableRowElement>>} */
-const tables = new Map();
-/** @param {string} bodyId @param {{id:string, cells:string[]}[]} rows */
-function table(bodyId, rows) {
-  let cache = tables.get(bodyId);
-  if (!cache) { cache = new Map(); tables.set(bodyId, cache); }
-  for (const [id, row] of cache) if (!rows.some(item => item.id === id)) { row.remove(); cache.delete(id); }
-  for (const item of rows) {
-    let row = cache.get(item.id);
-    if (!row) {
-      row = document.createElement('tr');
-      row.dataset.id = item.id;
-      for (const _ of item.cells) row.append(document.createElement('td'));
-      cache.set(item.id, row);
-      element(bodyId).append(row);
-    }
-    item.cells.forEach((text, index) => { if (row.cells[index].textContent !== text) row.cells[index].textContent = text; });
+// Build each station once. Updating text preserves keyboard focus and held inputs.
+for (const station of definitions.stations) {
+  const section=document.createElement('section');
+  section.className='station'; section.dataset.station=station.id; section.id=`station-${station.id}`;
+  section.setAttribute('aria-labelledby',`heading-${station.id}`);
+  section.innerHTML=`<div class="station-header"><div><p class="eyebrow"></p><h2 id="heading-${station.id}"></h2></div><span class="station-icon" aria-hidden="true"></span></div><p class="station-info"></p><div class="station-body"><div class="station-income"><strong></strong><span></span><small></small></div><div class="station-actions"></div><div class="station-extra"></div></div><div class="station-purchases"></div>`;
+  q(section,'.eyebrow').textContent=station.subtitle;
+  q(section,'h2').textContent=station.name;
+  q(section,'.station-icon').textContent=({observatory:'✧',analysis:'◈',outreach:'☀',support:'❧',academy:'⌂',research:'✦',science:'⌁'})[station.id];
+  q(section,'.station-info').textContent=station.use;
+  const actions=q(section,'.station-actions');
+  for (const action of definitions.actions.filter(item => item.station===station.id)) {
+    const button=document.createElement('button');
+    button.type='button'; button.className='action'; button.dataset.action=action.id;
+    const heading=document.createElement('strong'); heading.textContent=action.name;
+    const yieldText=document.createElement('span');
+    yieldText.textContent=Object.entries(action.output).map(([key,value]) => `+${fmt(value)} ${key==='training'?'course work':key==='science'?'study work':currencyName(definitions,key)}`).join(', ');
+    button.append(heading,yieldText); actions?.append(button);
+    const help=document.createElement('p'); help.className='action-help'; help.dataset.actionHelp=action.id;
+    help.textContent='Click or hold to help here. All passive stations keep running.'; actions?.append(help);
+    button.addEventListener('pointerdown',event => {
+      if (event.button!==0) return;
+      button.setPointerCapture(event.pointerId); startHold(action.id);
+    });
+    button.addEventListener('pointerup',stopHold); button.addEventListener('pointercancel',stopHold);
+    button.addEventListener('lostpointercapture',stopHold);
+    button.addEventListener('keydown',event => {
+      if (event.code==='Space' || event.code==='Enter') { event.preventDefault(); if (!event.repeat) startHold(action.id); }
+    });
+    button.addEventListener('keyup',event => { if (event.code==='Space' || event.code==='Enter') { event.preventDefault(); stopHold(); } });
+    button.addEventListener('blur',stopHold);
+    // Assistive technology and programmatic button activation use the same action.
+    button.addEventListener('click',event => { if (event.detail===0) { startHold(action.id); stopHold(); } });
   }
-}
-/** @param {string} id @param {string[]} items */
-function list(id, items) {
-  const key = JSON.stringify(items);
-  const container = element(id);
-  if (container.dataset.items === key) return;
-  container.replaceChildren(...items.map(text => { const li = document.createElement('li'); li.textContent = text; return li; }));
-  container.dataset.items = key;
-}
-function updateInstruments() {
-  const recipe = definitions.recipes.find(item => item.id === task.value);
-  const instruments = game.state.institution.instruments.filter(item => recipe?.compatibleInstruments.includes(item.definitionId));
-  options(instrument, instruments.length ? instruments.map(item => ({ id: item.id, name: name(item.definitionId) })) : [{ id: '', name: 'No instrument needed' }]);
-  instrument.disabled = instruments.length === 0;
-  const multiplier = recipe?.stat ? explainModifier(game, definitions, recipe.stat).multiplier : 1;
-  const capacity = (recipe?.capacity ?? 0) * multiplier;
-  element('task-help').textContent = recipe ? `Capacity: ${format(capacity * (recipe.activity && 'dataPerWork' in recipe.activity ? recipe.activity.dataPerWork : 1))} Data/s. Active Funding budget: ${format(capacity * (recipe.inputs.F ?? 0))}/s. ${recipe.activity?.kind === 'analyze' ? 'Processing stops when compatible Data runs out.' : recipe.activity?.kind === 'observe' ? 'New Data enters the queue for analysis.' : ''}` : 'The founder will be idle.';
+  if (station.id==='observatory') {
+    const info=document.createElement('p'); info.id='observing-breakdown'; info.className='small';
+    const owned=document.createElement('p'); owned.id='observing-owned'; owned.className='small';
+    q(section,'.station-extra').append(info,owned);
+  }
+  if (station.id==='analysis') {
+    const extra=q(section,'.station-extra');
+    const info=document.createElement('p'); info.className='small'; info.id='analysis-yield';
+    const buttons=document.createElement('div'); buttons.className='process-buttons';
+    for (const batch of [10,'all']) {
+      const button=document.createElement('button'); button.dataset.process=String(batch);
+      button.addEventListener('click',()=>send({type:'processData',quantity:batch==='all'?game.state.resources.D:10}));
+      buttons.append(button);
+    }
+    const note=document.createElement('p'); note.className='small'; note.textContent='Analyze for Knowledge now, or buy archive research below for Knowledge per second. Observing continues either way.';
+    extra.append(info,buttons,note);
+  }
+  if (station.id==='science') {
+    const extra=q(section,'.station-extra');
+    for (const program of definitions.programs) {
+      const card=document.createElement('div'); card.className='program-card'; card.dataset.program=program.id;
+      const title=document.createElement('h3'); title.textContent=program.name;
+      const description=document.createElement('p'); description.className='small'; description.textContent=program.description;
+      const cost=document.createElement('p'); cost.className='small'; cost.textContent=`${price(program.cost)}, paid once · ${program.work} work · ${program.publications} Publication on completion. Repeat studies pay for a new sample.`;
+      const button=document.createElement('button'); button.dataset.startProgram=program.id;
+      button.addEventListener('click',()=>send({type:'startProgram',programId:program.id}));
+      const progress=document.createElement('progress'); progress.dataset.programProgress=program.id; progress.max=program.work; progress.setAttribute('aria-label',`${program.name} progress`);
+      const status=document.createElement('p'); status.className='course-info'; status.dataset.programStatus=program.id;
+      card.append(title,description,cost,button,progress,status); extra.append(card);
+    }
+  }
+  if (station.id==='support') {
+    const status=document.createElement('p'); status.id='grant-status'; status.className='small'; q(section,'.station-extra').append(status);
+  }
+  if (station.id==='academy') {
+    const extra=q(section,'.station-extra');
+    const info=document.createElement('p'); info.className='course-info'; info.textContent=`One course: ${price(balance.course.cost)}, paid once up front. ${balance.course.work} work to graduate. No wages or recurring tuition.`;
+    const enroll=document.createElement('button'); enroll.id='enroll'; enroll.addEventListener('click',() => send({type:'enrollCourse'}));
+    const progress=document.createElement('progress'); progress.id='course-progress'; progress.max=balance.course.work; progress.setAttribute('aria-label','Paid course progress');
+    const status=document.createElement('p'); status.id='course-status'; status.className='course-info';
+    const limit=document.createElement('p'); limit.id='course-limit'; limit.className='course-info';
+    extra?.append(info,enroll,progress,status,limit);
+  }
+  const purchases=q(section,'.station-purchases');
+  const label=document.createElement('p'); label.className='section-label'; label.textContent='Invest in this station'; purchases?.append(label);
+  for (const item of definitions.investments.filter(item => item.station===station.id)) {
+    const row=document.createElement('div'); row.className='purchase'; row.dataset.investment=item.id;
+    const head=document.createElement('div'); head.className='purchase-head';
+    const title=document.createElement('h3'); title.textContent=item.name;
+    const count=document.createElement('span'); count.className='owned'; head.append(title,count);
+    const effect=document.createElement('p'); effect.textContent=item.effect;
+    const gain=document.createElement('p'); gain.className='purchase-gain';
+    const button=document.createElement('button'); button.dataset.buy=item.id;
+    const verb=document.createElement('span'); verb.textContent=item.kind==='appointment'?'Appoint permanently':item.kind==='producer'?'Add producer':item.kind==='unlock'?'Unlock':item.kind==='discovery'?'Research':'Improve';
+    const cost=document.createElement('small'); button.append(verb,cost);
+    button.addEventListener('click',() => send({type:'buyInvestment',investmentId:item.id}));
+    const reason=document.createElement('span'); reason.className='blocked';
+    row.append(head,effect,gain,button,reason); purchases?.append(row);
+  }
+  el('stations').append(section);
 }
 
-/** @type {Map<string, {row:HTMLTableRowElement, button:HTMLButtonElement, cost:HTMLTableCellElement, status:HTMLElement}>} */
-const purchases = new Map();
-function renderPurchases() {
-  const entries = [
-    ...definitions.upgrades.map(upgrade => ({ id: upgrade.id, name: upgrade.name, visible: upgrade.revealPrerequisites.every(ref => hasPrerequisite(game, ref)) || getUpgradeLevel(game, upgrade.id) > 0,
-      complete: getUpgradeLevel(game, upgrade.id) >= upgrade.maxLevel, level: getUpgradeLevel(game, upgrade.id),
-      description: `${upgrade.effects.map(effect => effect.kind === 'unlock' ? `Enables ${capabilityName(effect.capability)}.` : `+${format((effect.value - 1) * 100)}% ${statName(effect.stat)} per level.`).join(' ')} ${upgrade.persistence.startsWith('campaign') ? 'Campaign upgrade.' : 'Retained between campaigns.'}`,
-      command: /** @type {import('../core/types.js').Command} */ ({ type: 'buyUpgrade', upgradeId: upgrade.id }) })),
-    ...definitions.instruments.filter(item => item.id !== 'starter-refractor').map(item => ({ id: item.id, name: item.name,
-      visible: item.purchasePrerequisites.some(ref => hasPrerequisite(game, ref)), complete: game.state.institution.instruments.some(instrument => instrument.definitionId === item.id), level: 0,
-      description: 'Adds an instrument; retains your founding telescope.', command: /** @type {import('../core/types.js').Command} */ ({ type: 'purchaseInstrument', instrumentId: item.id }) })),
-  ];
-  let visible = 0;
-  for (const entry of entries) {
-    let control = purchases.get(entry.id);
-    if (!control) {
-      const row = document.createElement('tr'); row.dataset.id = entry.id;
-      const label = row.insertCell(); label.textContent = entry.name;
-      const help = document.createElement('small'); help.textContent = entry.description; label.append(help);
-      const cost = row.insertCell();
-      const actions = row.insertCell();
-      const button = document.createElement('button'); button.type = 'button'; button.dataset.purchase = entry.id;
-      button.addEventListener('click', () => act(() => send(entry.command), `${entry.name} purchased.`));
-      const status = document.createElement('small');
-      actions.append(button, status); element('purchases').append(row);
-      control = { row, cost, button, status }; purchases.set(entry.id, control);
-    }
-    control.row.hidden = !entry.visible;
-    if (entry.visible) visible++;
-    const quote = quoteCommand(game, definitions, balance, entry.command);
-    control.cost.textContent = entry.complete ? '—' : Object.entries(quote.costs).map(([id, amount]) => `${format(amount)} ${id}`).join(' + ');
-    control.button.textContent = entry.complete ? entry.id === 'analysis-throughput' ? 'Max level' : 'Owned' : entry.level ? `Buy level ${entry.level + 1}` : `Buy ${entry.name}`;
-    control.button.disabled = entry.complete || !quote.ok;
-    control.status.textContent = entry.complete ? 'Retained' : quote.ok ? 'Available' : quote.blockedReasons.map(reason).join('; ');
-    if (entry.id === 'analysis-throughput' && entry.complete) control.status.textContent = 'Campaign upgrade';
-    control.button.title = control.status.textContent;
-  }
-  element('purchases-empty').hidden = visible > 0;
+// Stable shop buttons preserve focus while prices and modifiers update.
+for (const upgrade of definitions.insightUpgrades) {
+  const card=document.createElement('div'); card.className='insight-card'; card.dataset.insightUpgrade=upgrade.id;
+  const title=document.createElement('h3'); title.textContent=upgrade.name;
+  const description=document.createElement('p'); description.textContent=upgrade.description;
+  const current=document.createElement('p'); current.className='small'; current.dataset.insightEffect=upgrade.id;
+  const button=document.createElement('button'); button.dataset.buyInsight=upgrade.id;
+  button.addEventListener('click',()=>send({type:'buyInsightUpgrade',upgradeId:upgrade.id}));
+  card.append(title,description,current,button); el('insight-upgrades').append(card);
 }
-/** @type {Map<string, {item:HTMLLIElement, label:HTMLElement, progress:HTMLProgressElement}>} */
-const milestones = new Map();
-function renderMilestones() {
-  for (const gate of definitions.gates) {
-    if (!gate.condition) continue;
-    const visible = gate.prerequisites.every(ref => hasPrerequisite(game, ref));
-    let row = milestones.get(gate.id);
-    if (!row) {
-      const item = document.createElement('li'); item.dataset.milestone = gate.id;
-      const label = document.createElement('span');
-      const progress = document.createElement('progress'); progress.max = gate.condition.quantity;
-      progress.setAttribute('aria-label', name(gate.id)); item.append(label, progress); element('milestones').append(item);
-      row = { item, label, progress }; milestones.set(gate.id, row);
-    }
-    row.item.hidden = !visible;
-    const condition = gate.condition;
-    const amount = condition.kind === 'interest' ? game.state.campaign.interestEarned
-      : game.state.investigations.evidence.filter(item => item.targetId === condition.targetId).reduce((sum, item) => sum + item.quantity, 0);
-    const complete = hasPrerequisite(game, gate.id);
-    row.label.textContent = `${name(gate.id)}: ${complete ? 'complete' : `${format(amount)} / ${format(condition.quantity)}`}`;
-    row.progress.value = complete ? condition.quantity : amount;
+/** @type {Record<import('../core/types.js').StatId,string>} */
+const statNames={observing:'Data',analysis:'Knowledge',outreach:'Interest',support:'Funding',teaching:'Teaching',research:'Expertise',science:'Study work'};
+function renderPrestige() {
+  const preview=getSummary(game,definitions,balance).prestige;
+  const shop=game.state.insight.phase==='shop';
+  const insight=game.state.insight;
+  el('run-label').textContent=`Run ${game.state.clock.campaignIndex}`;
+  el('review-prestige').hidden=shop || !(hasPrerequisite(game,'research') || insight.totalEarned>0);
+  /** @type {HTMLButtonElement} */(el('review-prestige')).disabled=awaitingNewRun || reviewingPrestige;
+  el('review-prestige').textContent=preview.eligible?`Prestige · +${preview.award} Insight`:'Review prestige';
+  el('prestige-panel').hidden=!shop && !reviewingPrestige;
+  el('prestige-review').hidden=shop;
+  el('insight-shop').hidden=!shop;
+  el('prestige-heading').textContent=shop?'Spend Insight · rebuild with a new perspective':`Conclude run ${preview.run}`;
+  el('stations').hidden=shop || reviewingPrestige;
+  el('journal-section').hidden=shop || reviewingPrestige;
+  for (const id of ['pause','advance-10','advance-60']) /** @type {HTMLButtonElement} */(el(id)).disabled=awaitingNewRun || shop || reviewingPrestige;
+  el('insight-modifiers').hidden=insight.totalEarned===0;
+  el('insight-modifiers').textContent=`${insight.points} unspent Insight · permanent modifiers: ${Object.entries(statNames).map(([stat,name])=>`${name} ×${fmt(insightMultiplier(game,definitions,/** @type {import('../core/types.js').StatId} */(stat)))}`).join(' · ')}`;
+  el('prestige-reward').textContent=preview.eligible?`Earn ${preview.award} Insight`:`Prestige reward: ${balance.prestige.baseAward} or more Insight`;
+  el('prestige-requirements').textContent=preview.eligible?'Requirements met: nebula frontier researched and at least one grant secured.':preview.blockedReasons.join(' · ');
+  el('prestige-payout').textContent=`${balance.prestige.baseAward} base Insight, with diminishing rewards for additional Publications: 2 Publications → ${balance.prestige.baseAward+1}, 5 → ${balance.prestige.baseAward+2}, 10 → ${balance.prestige.baseAward+3}. Your next reward increase is at ${preview.nextPublicationThreshold} Publications.`;
+  const loss=preview.losses;
+  el('prestige-losses').textContent=`You will lose: ${price(Object.fromEntries(Object.entries(loss.resources).filter(([key,value])=>value>0 || ['D','F','K','I','X'].includes(key))))}; ${loss.purchases} purchased levels, including ${loss.producers} producer purchases; ${loss.stations} station unlocks; ${loss.telescopes} telescopes; ${loss.people} trained people; ${loss.discoveries} journal discoveries; ${loss.publications} Publications and ${loss.grants} grants. Current run time: ${fmt(preview.seconds/60)} minutes.`;
+  el('prestige-work-loss').textContent=[loss.course?`Paid course progress ${fmt(loss.course.progress)}/${balance.course.work} will be lost.`:'No course is underway.',loss.program?`Paid study progress ${fmt(loss.program.progress)}/${definitions.programs.find(program=>program.id===loss.program?.id)?.work} will be lost.`:'No study is underway.'].join(' ');
+  const confirm=/** @type {HTMLButtonElement} */(el('confirm-prestige'));
+  confirm.disabled=awaitingNewRun || !preview.eligible; confirm.textContent=`Reset everything & earn ${preview.award} Insight`;
+  el('insight-wallet').textContent=`${insight.points} Insight available · +${insight.lastAward} earned from the previous run`;
+  el('insight-shop-info').textContent=`Run ${game.state.clock.campaignIndex-1} has ended and all ordinary progress has reset. Choose modifiers, or keep your points, then begin run ${game.state.clock.campaignIndex}. Production stays paused here.`;
+  el('start-next-run').textContent=`Begin run ${game.state.clock.campaignIndex}`;
+  for (const upgrade of definitions.insightUpgrades) {
+    const level=insight.upgrades[upgrade.id]??0;
+    const quote=quoteCommand(game,definitions,balance,{type:'buyInsightUpgrade',upgradeId:upgrade.id});
+    const button=/** @type {HTMLButtonElement} */(q(document,`[data-buy-insight="${upgrade.id}"]`));
+    button.disabled=awaitingNewRun || !quote.ok;
+    button.textContent=level>=upgrade.maxLevel?'Fully purchased':`Buy level ${level+1} · ${price(quote.costs)}`;
+    q(document,`[data-insight-effect="${upgrade.id}"]`).textContent=`Level ${level}/${upgrade.maxLevel} · ${upgrade.stats.map(stat=>{
+      const current=insightMultiplier(game,definitions,stat);return `${statNames[stat]} ×${fmt(current)} → ×${fmt(current*upgrade.factor)}`;
+    }).join(' · ')}${shop && !quote.ok && level<upgrade.maxLevel?' · '+quote.blockedReasons.join(' · '):''}`;
   }
 }
-function objective() {
-  const steps = [
-    ['lunar-record', 'Observe the Moon, then analyze 10 Data to make your first lunar record.'],
-    ['outreach', 'Buy Share the sky to open outreach and sustainable donations.'],
-    ['planet-record', 'Observe Jupiter, then analyze 20 compatible Data. Keep some extra observations for Knowledge.'],
-    ['stable-mount', 'Buy the stable mount to improve observing utilization.'],
-    ['tracking', 'Buy motorized tracking. Repeat observations and analysis if you need more Knowledge.'],
-    ['outreach-milestone', 'Assign a telescope to outreach and earn 10 cumulative Public Interest.'],
-    ['reflector', 'Save 100 Funding for a reflector. Outreach and donations support your observing work.'],
-    ['camera', 'Buy the camera for 75 Funding and 10 Knowledge. Repeated Moon/Jupiter records still produce Knowledge.'],
-    ['workstation', 'Buy the workstation for 50 Funding and 5 Knowledge to speed up analysis.'],
-    ['image-record', 'Capture lunar images with the reflector, then process 100 camera Data at the workstation.'],
-  ];
-  return steps.find(([id]) => !hasPrerequisite(game, id))?.[1] ?? 'Starter program complete. Your first image is in the journal. The academy is the next implementation package.';
-}
+
 function render() {
-  const summary = getSummary(game, definitions, balance);
-  element('clock').textContent = time(summary.seconds);
-  element('runtime-status').textContent = `Campaign ${summary.campaignIndex} · ${document.hidden ? 'Paused · tab hidden' : running ? `Running at ${speed}×${actualSpeed !== null && actualSpeed < speed * .9 ? ` (actual ${format(actualSpeed)}×)` : ''}` : 'Paused'}`;
-  element('pause').textContent = running ? 'Pause' : 'Run';
-  element('objective').textContent = objective();
-  table('resources', summary.resources.filter(item => item.revealed).map(item => ({ id: item.id, cells: [`${definitions.resources.find(resource => resource.id === item.id)?.name ?? item.id} (${item.id})`, format(item.amount), format(item.grossRate), format(item.consumptionRate), `${item.netRate > 0 ? '+' : ''}${format(item.netRate)}`] })));
-  const availableRecipes = definitions.recipes.filter(recipe => recipe.requiresFounder && recipe.prerequisites.every(id => hasPrerequisite(game, id)));
-  options(task, [...availableRecipes.map(recipe => ({ id: recipe.id, name: recipe.name })), { id: 'idle', name: 'Idle — no active task' }]);
-  updateInstruments();
-  options(outreachInstrument, game.state.institution.instruments.map(item => ({ id: item.id, name: name(item.definitionId) })));
-  list('instruments', game.state.institution.instruments.map(item => `${name(item.definitionId)} — ${game.state.jobs.filter(job => job.instrumentId === item.id && job.allocation > 0).map(job => name(job.recipeId)).join(', ') || 'available'}`));
-  const current = game.state.jobs.find(job => job.id === game.state.population.founder.task);
-  const currentPlan = summary.jobs.find(job => job.jobId === current?.id);
-  element('current-task').textContent = current && current.allocation > 0 ? `${name(current.recipeId)} · ${currentPlan?.blockedReasons.map(reason).join('; ') || 'ready to work'}` : 'Founder is idle.';
-  renderPurchases();
-  const visibleTargets = availableRecipes.filter(recipe => recipe.activity?.kind === 'observe').map(recipe => recipe.activity?.kind === 'observe' ? recipe.activity.targetId : '');
-  table('data', summary.data.filter(item => visibleTargets.includes(item.targetId)).map(item => ({ id: item.targetId, cells: [definitions.targets.find(target => target.id === item.targetId)?.name ?? item.targetId, format(item.queued), format(item.evidence), format(item.acquisitionRate), format(item.processingRate)] })));
-  renderMilestones();
-  element('outreach-panel').hidden = !hasPrerequisite(game, 'outreach');
-  const outreach = game.state.jobs.find(job => job.recipeId === 'outreach-session');
-  const donation = summary.resources.find(item => item.id === 'F');
-  element('outreach-status').textContent = `${format(game.state.resources.I)} / ${format(summary.audience.cap ?? 0)} Interest · ${format(summary.audience.donations * 100)}% audience for donations · donations ${format(donation?.grossRate ?? 0)} Funding/s · ${outreach?.allocation ? 'outreach assigned' : 'no outreach instrument assigned'}.`;
-  /** @type {HTMLButtonElement} */ (element('stop-outreach')).disabled = !outreach?.allocation;
-  const activeJobs = summary.jobs.filter(item => game.state.jobs.some(job => job.id === item.jobId && job.allocation > 0) && definitions.recipes.find(recipe => recipe.id === item.recipeId)?.prerequisites.every(id => hasPrerequisite(game, id)));
-  table('jobs', activeJobs.map(item => ({ id: item.jobId, cells: [name(item.recipeId), format(item.work / TICK_SECONDS), format((item.inputs.F ?? 0) / TICK_SECONDS),
-    [item.dataOutput ? `${format(item.dataOutput.quantity / TICK_SECONDS)} Data` : '', ...Object.entries(item.outputs).filter(([, amount]) => amount > 0).map(([id, amount]) => `${format(amount / TICK_SECONDS)} ${id}`)].filter(Boolean).join(', ') || '—',
-    [item.blockedReasons.map(reason).join('; ') || 'Working', ...(item.modifier?.contributions.map(modifier => `${name(modifier.upgradeId)} +${format(modifier.bonus * 100)}%`) ?? [])].join(' · ')] })));
-  options(priorityJob, activeJobs.map(item => ({ id: item.jobId, name: `${name(item.recipeId)} (priority ${game.state.jobs.find(job => job.id === item.jobId)?.priority ?? 0})` })));
-  list('journal', game.state.lifetime.journal.map(id => definitions.targets.find(target => target.id === id)?.permittedClaim ?? id).concat(game.state.lifetime.journal.length ? [] : ['No records yet.']));
-  list('events', recentEvents.map(event => `${time(event.tick * TICK_SECONDS)} · ${({ unlocked: 'Completed', buyUpgrade: 'Purchased', purchaseInstrument: 'Added instrument', setJobAllocation: 'Assigned work', setFounderTask: 'Founder task', setAudienceAllocation: 'Audience allocation', setJobPriority: 'Priority updated', jobCompleted: 'Finished work' })[event.type] ?? 'Activity'} · ${name(event.id)}`).concat(recentEvents.length ? [] : ['No activity in this session.']));
+  const summary=getSummary(game,definitions,balance);
+  const minutes=Math.floor(summary.seconds/60);
+  el('clock').textContent=`${String(minutes).padStart(2,'0')}:${String(Math.floor(summary.seconds%60)).padStart(2,'0')}`;
+  el('runtime-status').textContent=awaitingNewRun?'Previous save protected':game.state.insight.phase==='shop'?'Between runs · Insight shop':running?`Live · ${speed}×`:'Paused';
+  el('pause').textContent=running?'Pause':'Run';
+  /** @type {Array<[string,number,string]>} */
+  const balances=[['Data',game.state.resources.D,`+${fmt(summary.rates.D??0)}/s`],['Knowledge',game.state.resources.K,`+${fmt(summary.rates.K??0)}/s`]];
+  if (hasPrerequisite(game,'outreach')) balances.push(['Interest',game.state.resources.I,`+${fmt(summary.rates.I??0)}/s`]);
+  if (hasPrerequisite(game,'support-office')) balances.push(['Funding',game.state.resources.F,`+${fmt(summary.rates.F??0)}/s`]);
+  if (hasPrerequisite(game,'academy')) balances.push(['Unassigned people',summary.population.available,`${summary.population.total} trained · ${summary.population.appointed} appointed`]);
+  if (hasPrerequisite(game,'research')) balances.push(['Expertise',game.state.resources.X,`+${fmt(summary.rates.X??0)}/s`]);
+  if (hasPrerequisite(game,'photometry')) balances.push(['Publications',game.state.science.publications,`${summary.grants.active} / ${summary.grants.capacity} grants`]);
+  el('balances').replaceChildren(...balances.map(([name,value,note]) => {
+    const node=document.createElement('div'); node.className='balance';
+    const label=document.createElement('span'); label.textContent=name;
+    const count=document.createElement('strong'); count.textContent=fmt(value);
+    const help=document.createElement('small'); help.textContent=note;
+    node.append(label,count,help); return node;
+  }));
+  el('objective').textContent=summary.guidance.objective;
+  el('suggestion').textContent=summary.guidance.suggestion;
+  for (const station of summary.stations) {
+    const node=el(`station-${station.id}`); node.hidden=!station.visible;
+    const body=/** @type {HTMLElement} */(q(node,'.station-body')); body.hidden=!station.open;
+    const income=q(node,'.station-income');
+    let amount=0; let rate=0; let caption=station.output;
+    if (station.id==='observatory') { amount=game.state.resources.D; rate=summary.rates.D??0; }
+    else if (station.id==='science') { amount=game.state.science.publications; rate=summary.rates.science??0; }
+    else if (station.id==='academy') { amount=summary.population.available; rate=summary.rates.training??0; caption=summary.population.available===1?'unassigned person':'unassigned people'; }
+    else {
+      const key=/** @type {import('../core/types.js').StockId} */(({analysis:'K',outreach:'I',support:'F',research:'X'})[station.id]);
+      amount=game.state.resources[key]; rate=summary.rates[key]??0;
+    }
+    q(income,'strong').textContent=fmt(amount); q(income,'span').textContent=caption;
+    q(income,'small').textContent=station.id==='science'?`${fmt(rate)} study work/s · ${summary.program?'study underway':'ready for a paid study'}`:station.id==='academy'?`${fmt(rate)} teaching work/s · ${summary.population.total} total trained`:`+${fmt(rate)}/s passive`;
+  }
+  for (const action of definitions.actions) {
+    const button=/** @type {HTMLButtonElement} */(q(document,`[data-action="${action.id}"]`));
+    const visible=meets(action.requires);
+    button.hidden=!visible;
+    const help=/** @type {HTMLElement} */(q(document,`[data-action-help="${action.id}"]`)); help.hidden=!visible;
+    button.disabled=awaitingNewRun || Boolean(action.output.training && !game.state.course || action.output.science && !game.state.science.program);
+    const output=scaledOutput(game,definitions,action.output);
+    q(button,'span').textContent=Object.entries(output).map(([key,value])=>`+${fmt(value)} ${key==='training'?'course work':key==='science'?'study work':currencyName(definitions,key)}`).join(', ');
+    help.textContent=action.output.training && !game.state.course?'Enroll a prepaid course to begin. Existing staff keep working.':action.output.science && !game.state.science.program?'Start a prepaid study below. Each completed sample publishes once.':`Hold for up to ${Object.entries(output).map(([key,value])=>`${fmt(value*4)} ${key==='training' || key==='science'?'work':currencyName(definitions,key)}/s`).join(', ')} extra. Passive stations keep running.`;
+  }
+  for (const item of definitions.investments) {
+    const row=/** @type {HTMLElement} */(q(document,`[data-investment="${item.id}"]`));
+    const count=getPurchaseCount(game,item.id); const complete=count>=item.maxLevel;
+    row.hidden=!meets(item.requires) && count===0;
+    row.classList.toggle('complete',complete);
+    q(row,'.owned').textContent=complete?(item.kind==='discovery'?'✓ Researched':'✓ Installed'):count?`${count} ${item.kind==='appointment'?'appointed':'owned'}`:'';
+    const quote=quoteCommand(game,definitions,balance,{type:'buyInvestment',investmentId:item.id});
+    const button=/** @type {HTMLButtonElement} */(q(row,'button'));
+    button.disabled=awaitingNewRun || !quote.ok;
+    q(button,'small').textContent=price(quote.costs);
+    q(row,'.blocked').textContent=quote.ok?'':quote.blockedReasons.join(' · ');
+    button.setAttribute('aria-label',`${item.name} · ${price(quote.costs)}`);
+    const gain=previewInvestment(game,definitions,balance,item.id);
+    const parts=Object.entries(gain.passive).map(([key,value])=>`+${fmt(value)} ${key==='training'?'teaching work':key==='science'?'study work':currencyName(definitions,key)}/s`);
+    if (gain.activeGain>1e-9) parts.push(`${gain.actionName}: +${fmt(gain.activeGain)} more/action`);
+    if (gain.analysisGain>1e-9) parts.push(`Analyze 10: +${fmt(gain.analysisGain)} more Knowledge`);
+    q(row,'.purchase-gain').textContent=parts.length?`This purchase: ${parts.join(' · ')}`:'';
+  }
+  el('observing-breakdown').textContent=`Frontier: ${summary.frontier.name} ×${fmt(summary.frontier.yield)} · ${fmt(summary.observing.capacity)} installed capacity × ${fmt(summary.observing.bonus)} production bonus = ${fmt(summary.rates.D??0)} Data/s.`;
+  el('observing-owned').textContent=`${summary.observing.telescopes} telescope${summary.observing.telescopes===1?'':'s'} retained · ${getPurchaseCount(game,'additional-telescope')} additional · ${getPurchaseCount(game,'appoint-observer')} observers · ${hasPrerequisite(game,'reflector')?'reflector installed':'founding backyard setup'}.`;
+  el('analysis-yield').textContent=`One Data balance: ${fmt(game.state.resources.D)} available. Instant yield: ${fmt(analysisYield(game,definitions,balance))} Knowledge/Data.`;
+  document.querySelectorAll('[data-process]').forEach(node=>{
+    const button=/** @type {HTMLButtonElement} */(node);
+    const quantity=button.dataset.process==='all'?game.state.resources.D:10;
+    button.textContent=`Analyze ${button.dataset.process==='all'?'all':'10 Data'} → ${fmt(quantity*analysisYield(game,definitions,balance))} Knowledge now`;
+    button.disabled=awaitingNewRun || !quoteCommand(game,definitions,balance,{type:'processData',quantity}).ok;
+  });
+  for (const program of definitions.programs) {
+    const button=/** @type {HTMLButtonElement} */(q(document,`[data-start-program="${program.id}"]`));
+    const quote=quoteCommand(game,definitions,balance,{type:'startProgram',programId:program.id});
+    const active=summary.program?.id===program.id?summary.program:null;
+    button.disabled=awaitingNewRun || !quote.ok;
+    button.textContent=active?'Study underway':`Start study · ${price(quote.costs)}`;
+    const progress=/** @type {HTMLProgressElement} */(q(document,`[data-program-progress="${program.id}"]`));
+    progress.hidden=!active; progress.value=active?.progress??0;
+    q(document,`[data-program-status="${program.id}"]`).textContent=active?`${fmt(active.progress)} / ${active.required} work · ${fmt((active.required-active.progress)/active.rate)} s at passive speed · fully paid`:
+      quote.ok?'Ready to start. Completed studies publish automatically.':quote.blockedReasons.join(' · ');
+  }
+  el('grant-status').hidden=!hasPrerequisite(game,'first-publication');
+  el('grant-status').textContent=`${summary.grants.active} / ${summary.grants.capacity} Publication-backed grants · ${summary.grants.capacity-summary.grants.active} available slots. Each completed study opens one more slot. Publications are not spent; grants have no upkeep.`;
+  const enroll=/** @type {HTMLButtonElement} */(el('enroll'));
+  const enrollment=quoteCommand(game,definitions,balance,{type:'enrollCourse'});
+  enroll.disabled=awaitingNewRun || !enrollment.ok; enroll.textContent=summary.course?'Course underway':`Enroll one · ${price(enrollment.costs)}`;
+  const progress=/** @type {HTMLProgressElement} */(el('course-progress')); progress.hidden=!summary.course; progress.value=summary.course?.progress??0;
+  el('course-status').textContent=summary.course?`${fmt(summary.course.progress)} / ${summary.course.required} work · ${fmt(Math.max(0,summary.course.required-summary.course.progress)/summary.course.rate)} s at passive teaching speed · fully paid`:enrollment.ok?'Ready to enroll. Appointments stay at their stations.':enrollment.blockedReasons.join(' · ');
+  const limits=summary.academy;
+  el('course-limit').textContent=limits.teachingLimited
+    ?`At passive income, teaching is the limit: ${fmt(limits.courseSeconds)} s/course versus ${fmt(limits.supplySeconds)} s to replace enrollment costs. A teacher can speed future recruitment.`
+    :`At passive income, ${currencyName(definitions,limits.limitingCurrency)} is the enrollment limit${Number.isFinite(limits.supplySeconds)?` (${fmt(limits.supplySeconds)} s to replace costs; ${fmt(limits.courseSeconds)} s to teach)`:': no passive income yet'}. Grow that station before adding more teachers. Current savings and active help can cover the gap.`;
+  el('journal').replaceChildren(...(game.state.journal.length?game.state.journal.map(id => {
+    const node=document.createElement('li'); node.textContent=definitions.targets.find(target => target.id===id)?.claim??id; return node;
+  }):[Object.assign(document.createElement('li'),{textContent:'New research discoveries will appear here.'})]));
+  el('events').replaceChildren(...recentEvents.map(event => { const node=document.createElement('li'); node.textContent=event.detail; return node; }));
+  renderPrestige();
 }
 
-/** @param {string} id @param {() => void} action @param {string} success */
-function form(id, action, success) {
-  element(id).addEventListener('submit', event => { event.preventDefault(); act(action, success); });
-}
-task.addEventListener('change', updateInstruments);
-form('founder-form', () => {
-  if (task.value === 'idle') {
-    for (const job of game.state.jobs) if (definitions.recipes.find(recipe => recipe.id === job.recipeId)?.requiresFounder && job.allocation > 0) send({ type: 'setJobAllocation', jobId: job.id, recipeId: job.recipeId, allocation: 0 });
-    send({ type: 'setFounderTask', jobId: null });
-  } else assign(task.value, instrument.disabled ? null : instrument.value, number('allocation'));
-}, 'Founder assignment updated.');
-form('outreach-form', () => assign('outreach-session', outreachInstrument.value, number('outreach-allocation')), 'Outreach assignment updated.');
-form('audience-form', () => send({ type: 'setAudienceAllocation', donations: number('donation-share') / 100, recruitment: 0 }), 'Audience allocation updated.');
-form('priority-form', () => send({ type: 'setJobPriority', jobId: priorityJob.value, priority: number('priority-value') }), 'Job priority updated.');
-element('stop-outreach').addEventListener('click', () => act(() => {
-  const job = game.state.jobs.find(job => job.recipeId === 'outreach-session');
-  if (job) send({ type: 'setJobAllocation', jobId: job.id, recipeId: job.recipeId, allocation: 0 });
-}, 'Outreach stopped. Existing supporters still donate.'));
-element('pause').addEventListener('click', () => {
-  running = !running;
-  lastFrame = performance.now(); measuredAt = lastFrame; measuredTicks = 0; actualSpeed = null;
-  if (!running) persist();
+el('pause').addEventListener('click',() => { if (awaitingNewRun || reviewingPrestige || game.state.insight.phase==='shop') return; stopHold(); running=!running; accumulator=0; persist(); render(); });
+document.querySelectorAll('[data-speed]').forEach(node => node.addEventListener('click',() => {
+  speed=Number(/** @type {HTMLElement} */(node).dataset.speed);
+  document.querySelectorAll('[data-speed]').forEach(button => button.setAttribute('aria-pressed',String(Number(/** @type {HTMLElement} */(button).dataset.speed)===speed)));
   render();
+}));
+for (const seconds of [10,60]) el(`advance-${seconds}`).addEventListener('click',() => { stopHold(); advance(seconds/TICK_SECONDS); persist(); render(); });
+el('review-prestige').addEventListener('click',()=>{
+  stopHold(); resumeAfterReview=running; running=false; accumulator=0; reviewingPrestige=true; persist(); render(); el('prestige-panel').scrollIntoView({block:'start'});
 });
-speedInput.addEventListener('change', () => { speed = Number(speedInput.value); measuredAt = performance.now(); measuredTicks = 0; actualSpeed = null; render(); });
-for (const [id, ticks] of [['step', 1], ['advance-10', 40], ['advance-60', 240]]) {
-  element(String(id)).addEventListener('click', () => act(() => { running = false; advance(Number(ticks)); }, `Advanced ${Number(ticks) * TICK_SECONDS} simulated seconds. Time is paused.`));
+el('keep-run').addEventListener('click',()=>{reviewingPrestige=false; running=resumeAfterReview; accumulator=0; render();});
+el('confirm-prestige').addEventListener('click',()=>send({type:'beginPrestige'}));
+el('export-before-prestige').addEventListener('click',()=>exportGame(game));
+el('start-next-run').addEventListener('click',()=>{send({type:'startNextRun'});el('stations').scrollIntoView({block:'start'});});
+el('export').addEventListener('click',() => { if (awaitingNewRun) downloadSave(oldSave,'eyes-on-the-universe-previous-save.json'); else exportGame(game); });
+el('export-old').addEventListener('click',() => downloadSave(oldSave,'eyes-on-the-universe-previous-save.json'));
+function startNew() {
+  stopHold(); game=createGame(); reviewingPrestige=false; running=true; awaitingNewRun=false; saveEnabled=true; recentEvents=[]; accumulator=0;
+  el('old-save').hidden=true; message('A fresh start. Click or hold Observe, then establish an observing routine.'); persist(); render();
 }
-element('export').addEventListener('click', () => act(() => exportGame(game), 'Save exported as JSON.'));
-const importInput = /** @type {HTMLInputElement} */ (element('import'));
-importInput.addEventListener('change', async () => {
-  const file = importInput.files?.[0];
-  if (!file) return;
+el('start-new').addEventListener('click',() => {
+  try { if (oldSave) backupPreviousSave(oldSave); } catch { /* Export remains available from the notice. */ }
+  startNew();
+});
+el('restart').addEventListener('click',() => { if (confirm('Erase this prototype, including all permanent Insight upgrades and points? Export first to keep a copy.')) startNew(); });
+el('import').addEventListener('change',async () => {
+  const input=/** @type {HTMLInputElement} */(el('import')); const file=input.files?.[0]; if (!file) return;
   try {
-    const candidate = deserializeGame(await file.text());
-    game = candidate; running = false; accumulator = 0; recentEvents = []; saveEnabled = true;
-    render(); restoreInputs(); persist(); message('Save imported. Time is paused.');
-  } catch (error) { message(`Import failed: ${error instanceof Error ? error.message : error}`, true); }
-  importInput.value = '';
+    const candidate=deserializeGame(await file.text());
+    if (awaitingNewRun && oldSave) backupPreviousSave(oldSave);
+    stopHold(); game=candidate; reviewingPrestige=false; running=false; accumulator=0; saveEnabled=true; awaitingNewRun=false; recentEvents=[]; el('old-save').hidden=true;
+    message(game.state.insight.phase==='shop'?'Insight shop imported. Choose modifiers, then begin the next run.':'Station save imported. Press Run to continue.'); persist(); render();
+  } catch (error) { message(`Import left your current run unchanged: ${error instanceof Error?error.message:error}`,true); }
+  input.value='';
 });
-element('restart').addEventListener('click', () => {
-  if (!confirm('Start a new observing campaign? This replaces your current browser save. Export it first if you want to keep it.')) return;
-  game = createGame(); running = false; accumulator = 0; recentEvents = []; saveEnabled = true;
-  render(); restoreInputs(); persist(); message('New observing campaign. Choose a founder task to begin.');
-});
-function restoreInputs() {
-  const current = game.state.jobs.find(job => job.id === game.state.population.founder.task);
-  task.value = current?.recipeId ?? 'observe-moon';
-  if (!Array.from(task.options).some(option => option.value === task.value)) task.selectedIndex = 0;
-  updateInstruments();
-  if (current?.instrumentId) instrument.value = current.instrumentId;
-  /** @type {HTMLInputElement} */ (element('allocation')).value = String(current?.allocation ?? 1);
-  const outreach = game.state.jobs.find(job => job.recipeId === 'outreach-session');
-  outreachInstrument.value = outreach?.instrumentId ?? 'founding-telescope';
-  /** @type {HTMLInputElement} */ (element('outreach-allocation')).value = String(outreach?.allocation || 1);
-  /** @type {HTMLInputElement} */ (element('donation-share')).value = String(game.state.preferences.audience.donations * 100);
-}
-document.addEventListener('visibilitychange', () => {
-  lastFrame = performance.now(); measuredAt = lastFrame; measuredTicks = 0;
-  if (document.hidden) persist();
-  render();
-});
-window.addEventListener('pagehide', persist);
-/** @param {number} now */
-function frame(now) {
-  const elapsed = Math.max(0, (now - lastFrame) / 1000);
-  lastFrame = now;
-  if (running && !document.hidden) {
-    accumulator += elapsed * speed;
-    const ticks = Math.min(100, Math.floor(accumulator / TICK_SECONDS));
-    if (ticks > 0) {
-      try { advance(ticks); accumulator -= ticks * TICK_SECONDS; measuredTicks += ticks; }
-      catch (error) { running = false; message(`Simulation paused: ${error instanceof Error ? error.message : error}`, true); }
-    }
+window.addEventListener('blur',stopHold);
+document.addEventListener('visibilitychange',() => { if (document.hidden) { stopHold(); running=false; accumulator=0; persist(); render(); } });
+window.addEventListener('pagehide',() => { stopHold(); persist(); });
+function frame(now=performance.now()) {
+  const elapsed=Math.min(.25,(now-lastFrame)/1000); lastFrame=now;
+  if (running && !reviewingPrestige && game.state.insight.phase==='playing' && !document.hidden && !awaitingNewRun) {
+    accumulator+=elapsed*speed;
+    const ticks=Math.floor(accumulator/TICK_SECONDS);
+    if (ticks>0) { advance(ticks); accumulator-=ticks*TICK_SECONDS; }
   }
-  if (now - measuredAt >= 1000) { actualSpeed = measuredTicks * TICK_SECONDS * 1000 / (now - measuredAt); measuredAt = now; measuredTicks = 0; }
-  if (now - lastRender >= 200) { render(); lastRender = now; }
-  if (!document.hidden && now - lastSave >= 5000) persist();
+  if (now-lastRender>=120) { render(); lastRender=now; }
+  if (now-lastSave>=5000) persist();
   requestAnimationFrame(frame);
 }
-render();
-restoreInputs();
-requestAnimationFrame(frame);
+render(); requestAnimationFrame(frame);

@@ -1,223 +1,198 @@
 # Eyes on the Universe
 
-A graphics-free incremental astronomy prototype. The browser and headless Node.js
-tooling will share a deterministic simulation; the economy is validated before
-artwork or a final engine is selected.
+An incremental astronomy prototype with independent stations, a single Data wallet,
+and permanent production investments. Research new targets, add telescope capacity,
+and use other stations to accelerate the growing observatory network.
 
 ## Run locally
 
-Use **Node.js 24.16.0** (the installed Node 24 LTS runtime at project setup) and
-npm. `.node-version` and `.nvmrc` pin the runtime for compatible version managers.
+Use Node.js **24.16.0**, pinned in `.node-version` and `.nvmrc`.
 
 ```sh
 npm ci
 npm run dev
 ```
 
-Open <http://127.0.0.1:5173>. The server binds only to the local machine.
-Set `PORT` to choose another port, for example `PORT=5174 npm run dev`.
-Stop it with Ctrl+C. Serve the page over HTTP so browser ES modules load.
+Open <http://127.0.0.1:5173>. Set `PORT` for another port. No framework, bundler,
+backend, artwork pipeline or runtime dependency is required.
 
-## Verify
+## The opening loop
+
+1. Click/hold **Observe the sky**. Spend 5 Data to establish an observing routine,
+   automating the founding telescope at 1 base Data/s.
+2. Open Analysis for 10 Data. **Analyze 10** spends Data for immediate Knowledge;
+   **Expand archive research** spends 25 Data initially for 0.2 base Knowledge/s
+   permanently. Repeat archive investments have rising prices.
+3. Spend Knowledge to open Outreach. Share the sky or add standing activities to
+   earn Interest. Spend Interest on permanent supporter groups in the Support office.
+4. Research Jupiter for 8 Knowledge: the observing frontier rises from ×1 to ×2,
+   increasing the same Data stream and active observing. Buy additional telescopes
+   with Funding to increase the capacity benefiting from that frontier.
+5. Install a stable mount and tracking. Research Saturn and its moons (×3), build
+   the reflector/camera, then research star clusters (×5) to reveal the Academy.
+   Nebula imaging (×8) is an optional later discovery.
+6. Train graduates and permanently appoint them at whichever station needs growth.
+   The first graduate reveals Research regardless of their appointment.
+7. Use Research's mentoring programs to produce Expertise. Expertise improves
+   operating efficiency; Knowledge buys scientific capabilities and target unlocks.
+8. Develop photometry in **Scientific programs**, prepay a variable-star study,
+   then use its Publication to open grants in the Support office.
+
+**Data/s = installed observing capacity × frontier yield × equipment/practice bonus.**
+
+There are no typed Data balances, evidence inventories or target assignments.
+Discoveries are permanent upgrades recorded in the journal. A frontier upgrade
+represents network scientific productivity, not a claim that each small telescope
+can directly observe every frontier object. Older equipment remains productive.
+
+Each station shows local output, passive rates, owned producers, action yield,
+prices and the actual marginal gain after bonuses. Active assistance benefits
+from appropriate equipment/practice upgrades. Analysis methods and workstations
+improve both passive Knowledge and instant Knowledge per Data. Passive producers
+need no recurring wallet inputs and no salaries.
+
+**Next unlock** follows real progression gates. **Optional investment** suggests
+ways to grow without prescribing a specific archive purchase or staff appointment.
+The Data breakdown separates capacity, frontier and bonuses. A single common
+archive-research family replaces the previous lunar/Jupiter/imaging studies.
+
+## Academy and permanent staff
+
+A course costs **8 Funding + 3 Knowledge + 4 Interest**, paid up front. One classroom
+supplies 1 work/s toward 40 work. A teacher adds 1 base work/s, reducing passive
+course duration from 40 to 20 seconds. At the first passive Funding/Interest rates,
+each course's F/I costs replenish in 20 seconds. Additional teachers need stronger
+enrollment income to realize their full sustained benefit.
+
+Teaching assistance gives 0.25 base work per action, up to four actions per simulated
+second: approximately 20 seconds/course while held, or 13.3 seconds with one teacher,
+before teaching-practice bonuses. The Academy explains whether passive teaching or
+enrollment income currently limits sustained recruitment. Savings and active help
+can temporarily overcome income limits. Enrollment remains an explicit button.
+
+Each appointment uses one unassigned graduate and cannot be reversed. Total trained
+population stays intact. Observers add capacity to the whole observing network;
+analysts, educators, fundraisers and researchers add their station's currency.
+Qualified teachers add course speed. No particular first appointment is mandatory.
+
+## Time and saves
+
+Fresh runs start live. Click/hold works with mouse, touch and Space/Enter. Assistance
+is bounded to four actions per simulated second; only one station is actively
+helped, while passive output continues everywhere. Release, cancellation, loss of
+focus, pause or hiding the page ends the hold.
+
+Run/Pause, 1×/5×/20×, +10 s and +60 s are prototype utilities. All advance the same
+0.25-second ticks. Hidden tabs pause and closed tabs earn no progress. Reload
+restores paused. No held input is saved.
+
+Local saves occur on purchases, every five seconds and page exit. Export/import
+uses the shared versioned serializer. Failed imports leave the current run intact.
+Schema **8**, simulation **0.9.0-insight**, identifies P7. The exact bundled P6
+programs save and the preceding single-Data save upgrade automatically: resources,
+producers, people, appointments, discoveries and paid work are preserved. They
+start with zero Insight and no permanent modifiers. Earlier economies
+or other configurations remain protected with an export option until an explicit
+fresh run. New-run replacement also keeps a previous-economy local backup.
+
+## Scientific programs and grants (P6)
+
+After Research and camera equipment, **Develop photometry** costs 30 Knowledge.
+This opens an independent scientific workspace with 1 study work/s. A variable-star
+study costs **500 Data + 20 Knowledge + 15 Funding**, paid in full upfront, and
+requires **60 work**. It completes automatically with **one Publication**. Repeats
+pay the full price for a new sample; no typed Data or evidence inventory is added.
+
+One study runs at a time, alongside observations, archive research, outreach,
+teaching and mentoring. Hold **Work on the study** for 0.25 base work/action.
+**Appoint scientist** uses one unassigned graduate to add 1 base work/s, reducing
+the passive study duration from 60 to 30 seconds. Scientific-practice upgrades
+spend Expertise to increase both passive and active study work. No researcher or
+grant is required for the first study, so the unlock has a bootstrap path.
+
+The first Publication reveals **Open grant office** in Support (50 Funding +
+10 Knowledge). **Secure observing grant** initially costs 20 Funding + 5 Knowledge
+and adds 2 base Funding/s without upkeep. Each Publication backs one grant slot;
+Publications are not spent. More published studies open more slots. Grant prices
+increase on repeat purchases. Support shows active grants, total slots and the
+reason a further purchase is blocked.
+
+The first result and grant replace the previous end-of-prototype objective.
+P7 adds the full prestige transition and Insight shop described below.
+
+## Full-reset prestige and Insight (P7)
+
+Research the **nebula frontier** and **secure an observing grant** to become
+eligible. Review prestige from the time-control bar. Review pauses the game and
+shows the live reward, all resource balances and ordinary purchases that will be
+lost, plus unfinished prepaid course/study progress. **Keep this run** cancels;
+**Export this run first** saves a portable checkpoint.
+
+**Reset everything & earn Insight** commits the reset. All ordinary currencies,
+producers, stations, target unlocks, discoveries, telescopes, equipment, staff,
+appointments, qualifications, Publications, grants and unfinished work reset.
+The new run has only the free backyard telescope, Moon baseline and starting
+balances. Permanent-within-run investments must all be rebuilt.
+
+The first eligible run earns **4 Insight**. Additional Publications add diminishing
+rewards: **2 Publications → 5 Insight; 5 → 6; 10 → 7**. Formula:
+`4 + floor(sqrt(max(0, Publications - 1)))`. Eligibility is required regardless of
+that count. The preview shows the next Publication threshold. Reward values are
+prototype seeds, not final tuning.
+
+After committing, the game stays paused in the **Insight shop**. Buy permanent
+modifiers with buttons, then **Begin run 2** (or the subsequent run). Prices double
+per level. Ordinary game actions and time advancement cannot run in the shop.
+Reload/import restores the shop without re-awarding points. Unspent Insight can
+be saved and spent at a future prestige; upgrades are purchased only between runs.
+
+| Modifier | First cost | Permanent effect per level |
+|---|---:|---|
+| Expansive observing | 2 Insight | ×2 passive Data and observing assistance |
+| Clear analysis | 2 Insight | ×2 passive Knowledge and instant Knowledge/Data |
+| Shared enthusiasm | 2 Insight | ×2 Interest and Funding, including active help |
+| Institutional memory | 2 Insight | ×2 teaching, Expertise and scientific-study progress, including help |
+| Connected thinking | 1 Insight | ×1.25 all seven production categories, including instant analysis |
+
+Insight factors multiply the current run's local bonuses and compound across
+levels. **Only purchased Insight modifiers and unspent Insight persist.** The run
+number and earned-point accounting are metadata, not retained production. Restart
+prototype separately confirms erasing even permanent Insight; prestige preserves it.
+
+## Verification and status
 
 ```sh
 npm run check
-npm test
-node --input-type=module -e "import { createGame } from './src/core/index.js'; console.log(createGame().state.resources)"
+node --test test/stations.test.js
+npm run scenario:stations
+npm run scenario:prestige
 ```
 
-The strict JSDoc checks emit no files. Browser code has DOM types and no Node
-globals; tooling and tests have Node types and no DOM globals. Shared core code
-is checked in both environments. TypeScript and Node type declarations are
-exactly pinned development dependencies; there are no runtime dependencies or
-bundler.
+The existing single progression test now follows the network through a full reset,
+shop save/reload and faster rebuilding. It checks that paid unfinished work is
+listed and discarded, every ordinary state partition resets, rewards/Insight spending
+survive reload, and the same policy rebuilds faster. No broad new suite was added.
+Existing server/import smoke checks remain available through `npm test`.
 
-The browser starts paused. Choose **Observe the Moon**, click **Assign founder**,
-then click **Run** or **+10 s**. Switch to **Analyze lunar observations** and
-advance another ten seconds to complete your first record. Follow the objective
-strip to buy outreach, track a planet, and build the imaging setup.
+The scripted ordinary-command path reaches the Academy at **438.25 simulated
+seconds**, its first Publication at **670 seconds**, and two Publications/two grants
+at **700 seconds**. A scientist reduces the second study from 60 to 30 seconds;
+Funding grows from 2.2 to 6.2/s while Data remains 144/s. These measure one policy,
+not optimal play or final balance. Larger facilities, mountain observatories,
+radio and spacecraft remain planned content.
 
-## Implementation status
+The prestige scenario starts from that completed network, demonstrates losses using
+unfinished paid work, earns 5 Insight and buys observing, shared enthusiasm and
+connected thinking. The same P6 policy takes **380 simulated seconds** in run two,
+versus **700 seconds** initially; Academy returns in **173.25 seconds**, versus
+438.25 initially. It is one policy and upgrade choice, not an optimality claim.
 
-P0 provides the ES module entry points, plain browser shell, localhost static
-server, separate type checks, and Node test entry. The tests exercise shared-core
-import and actual HTTP serving, including module MIME types and private paths.
-P1 adds the ten resource contracts, upgrade persistence classes, prerequisite
-validation, starter content definitions, fixture A, and canonical save/load.
-The browser creates the same starter state as Node.
+The browser and headless scenario share a runtime-neutral deterministic core.
+Commands are `performStationAction`, `buyInvestment`, `processData` (quantity only),
+`enrollCourse`, `startProgram`, `beginPrestige`, `buyInsightUpgrade`, and
+`startNextRun`; quotes and purchase previews are read-only. There are no DOM,
+storage, timer or Node dependencies inside the core.
 
-P2 adds fixed ticks, shared-input reservations, atomic commands, rate summaries,
-and events. P3 adds the reachable starter economy, typed observation lots and
-analysis evidence, outreach/donations, tracking, reflector, camera, and workstation.
-P4 makes the starter slice playable with purchases, founder/instrument assignment,
-outreach, explanations, time controls, and local saves. Next is **P5: academy and
-team**. General simulation/sweep commands and reports arrive in later packages.
-
-## Definitions and saves
-
-`src/definitions/resources.js` declares resource storage, spending, reveal, and
-reset behavior. `content.js` contains the initial target/instrument/upgrade
-definitions and named gates. Later resource reveal gates reserve IDs, rather
-than implement those systems. Numerical seeds live in `balance.js`; prices,
-effects, and curves remain untested design inputs.
-
-```js
-import { createGame, serializeGame, deserializeGame } from './src/core/index.js';
-
-let game = createGame();
-const json = serializeGame(game);
-game = deserializeGame(json); // Only replace the active game after success.
-```
-
-All three functions also accept `(definitions, balance)` after their main
-argument; `createGame(definitions, balance)` has no main argument. They default
-to the bundled configuration. The core has no storage, timers, DOM, or Node
-imports. Browser import/export and localStorage use this same API.
-
-The save envelope identifies schema, content, simulation, and balance versions.
-Its deterministic FNV-1a configuration fingerprint covers both the balance
-object and assembled definitions, including purchase/effect seeds. It detects
-configuration changes even when a version label was not changed; it is not a
-cryptographic checksum or proof of legitimate play. A mismatched configuration
-is rejected rather than silently rebased. No migrations are needed before
-public saves exist.
-
-Validation rejects invalid references, dependency cycles, unsupported effects,
-bad persistence classes, nonfinite/negative stocks and costs, invalid counts,
-unknown fields, and out-of-bounds upgrade levels. Permanent, campaign, and
-Legacy upgrade levels occupy distinct state partitions. Population groups,
-programs, Legacy purchase history, and assignment preference arrays remain empty
-until their corresponding subsystems are implemented.
-
-P1 findings: definition acyclicity and save integrity do not prove economic
-reachability. The first executable progression check belongs to P3.
-
-## Simulation kernel
-
-```js
-import {
-  advanceTicks, balance, createGame, definitions, dispatch, getSummary,
-} from './src/core/index.js';
-
-const game = createGame();
-advanceTicks(game, definitions, balance, 40); // Exactly 10 simulated seconds.
-console.log(getSummary(game, definitions, balance));
-// Once a recipe is defined, configure it through dispatch rather than editing state:
-// dispatch(game, definitions, balance, {
-//   type: 'setJobAllocation', jobId: 'example', recipeId: 'example', allocation: 1,
-// });
-```
-
-Commands available: `buyUpgrade`, `purchaseInstrument`, `setJobAllocation`,
-`setFounderTask`, `setJobPriority`, and `setAudienceAllocation`. A founder task selects a job ID, or `null`
-for idle. Recipe and instrument allocations share a capacity of one; a founder
-can work only on the selected job. Finite jobs preserve fractional progress,
-release allocation on completion, and emit one completion event. Legacy buying,
-people, programs, and prestige commands arrive with their respective packages.
-
-`quoteCommand` describes costs and blocked reasons without mutation. `dispatch`
-rechecks the command and spends only on success. Both use the argument order
-`(game, definitions, balance, command)`. Immediate callers retain returned command
-results as history; rejected actions do not alter the save.
-
-`advanceTicks(game, definitions, balance, count, schedule?)` executes identical
-0.25-second ticks. Optional scheduled entries are `{ tick, sequence, command }`;
-ticks are absolute, and sequence breaks ties. Entries execute before production
-at their boundary. The same schedule can be reused across successive advances.
-Returned history separates accepted and rejected commands, alongside events.
-It is kept outside the canonical save; callers persist future schedules as part
-of a replay rather than silently saving an adapter queue.
-
-Each tick reserves inputs from starting inventories in descending priority,
-then ascending job ID (code-unit order). Outputs become usable next tick.
-Shortages fund partial work without debt. Summaries show the next tick's actual
-gross/net rates, modifiers, and blocked reasons without advancing the game.
-Modifiers add level bonuses within a persistence category and multiply across
-categories. Only gates explicitly marked `autoUnlock` unlock from prerequisites;
-science milestones have explicit evidence or audience conditions.
-
-P2 verification uses one small kernel scenario for atomic spending, snapshot
-reservations, priority, single completion, and matching chunked/save continuation.
-Its stock recipes are fixtures rather than game content. Schema 3 and simulation
-`0.3.0-p3` intentionally reject the earlier prototype saves.
-
-## Starter economy (P3)
-
-Run the scripted progression using ordinary commands and simulated time:
-
-```sh
-npm run scenario:starter
-npm run scenario:starter -- --low-funding
-node --test test/starter.test.js test/simulation.test.js
-```
-
-The normal seed uses 25 Funding. The low-funding scenario starts with five, buys
-outreach, and reaches exactly zero; basal donations recover on the next tick.
-This is a reachable funding shortage, without debug resource edits. Both runs
-reach the processed-image milestone and retain the founding telescope on outreach.
-The scenario prints milestone times, resource totals, typed queues/evidence, and
-command count. It is a scripted path, not an optimized policy or balance verdict.
-
-The founder observes or analyzes, one task at a time. Moon observations yield
-typed lunar Data; processing ten completes the first record. A Jupiter record
-requires twenty compatible Data. Analysis produces 0.2 Knowledge per Data and
-linked evidence once. Repeating observations remains productive after journal
-completion. Continuous compatible acquisitions merge into lots with instrument,
-target, mode, quantity, observation interval, and consumed quantity; evidence
-retains the source lot. Time-series coverage is later work.
-
-Outreach uses allocated telescope time, competing with observations. This
-prototype abstracts the outreach operation without requiring the founder;
-once the reflector arrives, the founding telescope can support income while the
-founder operates the newer instrument. Public Interest grows at 0.1/s up to 100.
-Donations use the allocated audience without consuming it: 0.02 Funding/s per
-Interest plus 0.05/s basal support after outreach is purchased. Donation and
-recruitment shares total at most one; recruitment production arrives with P5.
-
-The mount improves observing utilization; tracking enables camera operation
-without repeated target correction. The reflector unlocks camera purchasing.
-Camera acquisition starts at four Data/s with a 0.05 Funding/s base budget;
-the workstation processes up to four Data/s at 0.05 Funding per Data.
-Mount utilization affects both acquisition and its active budget. Free slow
-self-analysis remains available if funded processing stalls. A first processed
-image requires 100 camera Data from the lunar imaging task, opening the next
-academy milestone without implementing the academy yet.
-
-Measured scripted baseline: **607.25 simulated seconds** to the first processed
-image with 25 starting Funding. This path collects a small Knowledge reserve
-before camera/workstation purchases. Prices and rates remain seed hypotheses;
-the complete prestige cycle is still needed to assess pacing. P3 adds one
-progression test covering image reachability, zero-F recovery, and saving the
-resulting data/evidence state; it reuses the existing kernel smoke test.
-
-## Playing in the browser (P4)
-
-- Use **Run/Pause** and **1×/5×/20×** for real-time play. **Step**, **+10 s**, and
-  **+60 s** pause and advance exact amounts. Hidden tabs pause; closed tabs do
-  not earn offline progress. Accelerating the simulation never skips ticks.
-- Founder assignment switches off the previous founder task and any conflicting
-  telescope allocation through ordinary commands. Choose **Idle** to stop work.
-  The task menu reveals observations and analysis methods as they become available.
-- Outreach has its own instrument assignment and donation audience allocation.
-  While analyzing, put the free telescope back on outreach. Once the reflector
-  is built, keep the founding telescope on outreach while the founder captures images.
-- Purchases reveal progressively. Disabled buttons explain missing prerequisites
-  and resources. Repeat free observations/analysis for more Knowledge; first-time
-  milestones do not remove repeat production. Purchases tolerate tiny numerical
-  rounding residue at the stated cost.
-- Resources show gross, consumed, and net rates. Typed queues, evidence, milestone
-  bars, instrument roles, journal records, and recent activity explain progression.
-  Expand **Operations & rate details** for shortages, modifiers, and job priorities.
-- The game saves locally every five seconds, after successful actions, on pause,
-  and on leaving the page. Reload restores it paused. **Export save** downloads
-  portable JSON; **Import save** validates a file before replacing the active game.
-  Failed imports retain the current session. **Restart prototype** asks before
-  replacing the browser save. Import/export handles the bundled balance; custom
-  scenario configurations remain a headless workflow.
-
-The plain DOM interface adds no runtime packages, engine, or artwork. P4 uses
-browser playthrough verification instead of adding automated UI test infrastructure.
-
-See [the game design](eyes-on-the-universe-game-plan.md) and
-[the implementation plan](eyes-on-the-universe-prototype-implementation-plan.md)
-for the progression, persistence rules, and package acceptance gates.
+See the [game design](eyes-on-the-universe-game-plan.md),
+[implementation plan](eyes-on-the-universe-prototype-implementation-plan.md), and
+[findings and resolution record](findings.md).

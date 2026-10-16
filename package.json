@@ -10,7 +10,8 @@
     "dev": "node tools/server.js",
     "check": "tsc -p jsconfig.json && tsc -p tools/jsconfig.json",
     "test": "node --test",
-    "scenario:starter": "node scenarios/starter.js"
+    "scenario:stations": "node scenarios/stations.js",
+    "scenario:prestige": "node scenarios/prestige.js"
   },
   "devDependencies": {
     "@types/node": "24.12.4",
