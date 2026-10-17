@@ -16,6 +16,33 @@ npm run dev
 Open <http://127.0.0.1:5173>. Set `PORT` for another port. Native JavaScript
 modules run directly; no framework, bundler or runtime dependencies are required.
 
+## Publish on GitHub Pages
+
+The [Pages workflow](.github/workflows/pages.yml) builds and deploys on pushes to
+this repository's default branch. It also supports manual runs from **Actions →
+Deploy game to GitHub Pages → Run workflow**, selecting the default branch.
+
+1. Push this project, including the workflow and `package-lock.json`, to GitHub.
+2. In the repository, open **Settings → Pages → Build and deployment** and select
+   **GitHub Actions** as the source.
+3. Run the workflow or push another commit to the default branch. The deployment
+   job's environment link and **Settings → Pages** show the published URL.
+
+The workflow installs the pinned Node version, runs the existing checks/tests,
+builds `dist/` and publishes that directory using GitHub's Pages actions. It uses
+GitHub's built-in token; no personal access token or deployment secret is needed.
+The branch condition follows the repository's default branch automatically.
+See [GitHub's Pages workflow setup](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
+
+```sh
+npm run build
+```
+
+`dist/` contains only the game shell, stylesheet and browser modules. Relative
+asset URLs work at both a domain root and a project path such as `/repository/`.
+No application server is needed in production. Hosted saves live in that browser's
+local storage; use Export/Import to transfer a local development save to the site.
+
 ## Resource flow
 
 | Resource | Produced by | Its role |
