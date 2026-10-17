@@ -1,5 +1,5 @@
 import { productionRates } from './rates.js';
-import { completeProjects, produce } from './commands.js';
+import { advanceProjects, produce } from './commands.js';
 import { TICK_SECONDS } from './versions.js';
 
 /** @param {import('./types.js').GameState} game @param {import('./types.js').Definitions} definitions
@@ -15,7 +15,7 @@ export function advanceTicks(game, definitions, balance, count) {
   for (let index=0;index<count;index++) {
     produce(game,definitions,rates,TICK_SECONDS);
     game.state.clock.tick++;
-    events.push(...completeProjects(game,definitions,balance));
+    events.push(...advanceProjects(game,definitions,balance,TICK_SECONDS));
   }
   return {events};
 }

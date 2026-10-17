@@ -1,3 +1,3 @@
-export const SAVE_SCHEMA_VERSION = 8;
-export const SIMULATION_VERSION = '0.9.0-insight';
+export const SAVE_SCHEMA_VERSION = 13;
+export const SIMULATION_VERSION = '0.14.0-progression';
 export const TICK_SECONDS = 0.25;

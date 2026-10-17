@@ -1,3 +1,5 @@
+import { buildJointScience } from './joint-science.js';
+import { buildObservatory, renderObservatory } from './observatory.js';
 import { advanceTicks, balance, createGame, definitions, deserializeGame, dispatch, getSummary, quoteCommand, TICK_SECONDS } from '../core/index.js';
 import { getPurchaseCount, hasPrerequisite, scaledOutput, analysisYield, previewInvestment, insightMultiplier } from '../core/rates.js';
 import { currencyName } from '../core/commands.js';
@@ -52,6 +54,11 @@ try {
 function record(events) {
   recentEvents=[...events,...recentEvents].slice(0,20);
   if (events.some(event => event.type==='graduate' || event.type==='record' || event.type==='publication')) message(events.find(event => event.type==='graduate' || event.type==='record' || event.type==='publication')?.detail ?? 'Milestone completed.');
+  const completion=events.find(event=>event.type==='completion');
+  if (completion) {
+    stopHold(); running=false; accumulator=0; message(completion.detail); persist(); render();
+    el('ending-receipt').focus({preventScroll:true}); el('ending-receipt').scrollIntoView({block:'start'});
+  }
 }
 function persist() {
   if (!saveEnabled) return;
@@ -76,8 +83,6 @@ function send(command,quiet=false) {
     else if (command.type==='startNextRun') message(`Run ${game.state.clock.campaignIndex} begins. Rebuild with your permanent Insight modifiers.`);
     else if (command.type==='buyInvestment') message(`${definitions.investments.find(item => item.id===command.investmentId)?.name}: added to the network.`);
     else if (command.type==='processData') message(`Processed ${fmt(command.quantity)} Data → ${fmt(command.quantity*analysisYield(game,definitions,balance))} Knowledge. Observations continue.`);
-    else if (command.type==='startProgram') message('Scientific study paid in full. Publication work is underway.');
-    else message('Course paid in full. Teaching is underway.');
   }
   if (!quiet) { persist(); render(); }
 }
@@ -98,7 +103,7 @@ function stopHold() {
 function startHold(actionId) {
   if (awaitingNewRun || reviewingPrestige || game.state.insight.phase==='shop') return;
   const action=definitions.actions.find(item => item.id===actionId);
-  if (!action || !meets(action.requires) || action.output.training && !game.state.course || action.output.science && !game.state.science.program) return;
+  if (!action || !meets(action.requires)) return;
   stopHold(); heldAction=actionId; running=true;
   q(document,`[data-action="${actionId}"]`)?.classList.add('is-held');
   send({type:'performStationAction',actionId},true);
@@ -113,7 +118,7 @@ for (const station of definitions.stations) {
   section.innerHTML=`<div class="station-header"><div><p class="eyebrow"></p><h2 id="heading-${station.id}"></h2></div><span class="station-icon" aria-hidden="true"></span></div><p class="station-info"></p><div class="station-body"><div class="station-income"><strong></strong><span></span><small></small></div><div class="station-actions"></div><div class="station-extra"></div></div><div class="station-purchases"></div>`;
   q(section,'.eyebrow').textContent=station.subtitle;
   q(section,'h2').textContent=station.name;
-  q(section,'.station-icon').textContent=({observatory:'✧',analysis:'◈',outreach:'☀',support:'❧',academy:'⌂',research:'✦',science:'⌁'})[station.id];
+  q(section,'.station-icon').textContent=({observatory:'✧',analysis:'◈',outreach:'☀',support:'❧',academy:'⌂',research:'✦',science:'⌁',engineering:'⚒',radio:'◉',space:'⊙',joint:'✣'})[station.id];
   q(section,'.station-info').textContent=station.use;
   const actions=q(section,'.station-actions');
   for (const action of definitions.actions.filter(item => item.station===station.id)) {
@@ -121,7 +126,7 @@ for (const station of definitions.stations) {
     button.type='button'; button.className='action'; button.dataset.action=action.id;
     const heading=document.createElement('strong'); heading.textContent=action.name;
     const yieldText=document.createElement('span');
-    yieldText.textContent=Object.entries(action.output).map(([key,value]) => `+${fmt(value)} ${key==='training'?'course work':key==='science'?'study work':currencyName(definitions,key)}`).join(', ');
+    yieldText.textContent=Object.entries(action.output).map(([key,value]) => `+${fmt(value)} ${currencyName(definitions,key)}`).join(', ');
     button.append(heading,yieldText); actions?.append(button);
     const help=document.createElement('p'); help.className='action-help'; help.dataset.actionHelp=action.id;
     help.textContent='Click or hold to help here. All passive stations keep running.'; actions?.append(help);
@@ -142,7 +147,9 @@ for (const station of definitions.stations) {
   if (station.id==='observatory') {
     const info=document.createElement('p'); info.id='observing-breakdown'; info.className='small';
     const owned=document.createElement('p'); owned.id='observing-owned'; owned.className='small';
-    q(section,'.station-extra').append(info,owned);
+    const plate=document.createElement('div'); plate.id='observatory-network';
+    buildObservatory(plate,definitions.facilities);
+    q(section,'.station-extra').append(plate,info,owned);
   }
   if (station.id==='analysis') {
     const extra=q(section,'.station-extra');
@@ -156,31 +163,33 @@ for (const station of definitions.stations) {
     const note=document.createElement('p'); note.className='small'; note.textContent='Analyze for Knowledge now, or buy archive research below for Knowledge per second. Observing continues either way.';
     extra.append(info,buttons,note);
   }
-  if (station.id==='science') {
-    const extra=q(section,'.station-extra');
-    for (const program of definitions.programs) {
-      const card=document.createElement('div'); card.className='program-card'; card.dataset.program=program.id;
-      const title=document.createElement('h3'); title.textContent=program.name;
-      const description=document.createElement('p'); description.className='small'; description.textContent=program.description;
-      const cost=document.createElement('p'); cost.className='small'; cost.textContent=`${price(program.cost)}, paid once · ${program.work} work · ${program.publications} Publication on completion. Repeat studies pay for a new sample.`;
-      const button=document.createElement('button'); button.dataset.startProgram=program.id;
-      button.addEventListener('click',()=>send({type:'startProgram',programId:program.id}));
-      const progress=document.createElement('progress'); progress.dataset.programProgress=program.id; progress.max=program.work; progress.setAttribute('aria-label',`${program.name} progress`);
-      const status=document.createElement('p'); status.className='course-info'; status.dataset.programStatus=program.id;
-      card.append(title,description,cost,button,progress,status); extra.append(card);
-    }
-  }
   if (station.id==='support') {
     const status=document.createElement('p'); status.id='grant-status'; status.className='small'; q(section,'.station-extra').append(status);
   }
-  if (station.id==='academy') {
+  if (station.id==='joint') buildJointScience(q(section,'.station-extra'),definitions);
+  if (station.id==='radio') {
+    const note=document.createElement('p'); note.id='radio-capacity'; note.className='small';
+    q(section,'.station-extra').append(note);
+  }
+  if (station.id==='space') {
     const extra=q(section,'.station-extra');
-    const info=document.createElement('p'); info.className='course-info'; info.textContent=`One course: ${price(balance.course.cost)}, paid once up front. ${balance.course.work} work to graduate. No wages or recurring tuition.`;
-    const enroll=document.createElement('button'); enroll.id='enroll'; enroll.addEventListener('click',() => send({type:'enrollCourse'}));
-    const progress=document.createElement('progress'); progress.id='course-progress'; progress.max=balance.course.work; progress.setAttribute('aria-label','Paid course progress');
-    const status=document.createElement('p'); status.id='course-status'; status.className='course-info';
-    const limit=document.createElement('p'); limit.id='course-limit'; limit.className='course-info';
-    extra?.append(info,enroll,progress,status,limit);
+    for (const mission of definitions.missions) {
+      const card=document.createElement('div'); card.className='mission-card'; card.dataset.mission=mission.id;
+      const name=document.createElement('h3'); name.textContent=mission.name;
+      const description=document.createElement('p'); description.className='small'; description.textContent=mission.description;
+      const assembly=document.createElement('p'); assembly.className='small'; assembly.dataset.assembly=mission.id;
+      const progress=document.createElement('progress'); progress.max=mission.seconds; progress.dataset.missionProgress=mission.id; progress.setAttribute('aria-label',`${mission.name} cycle progress`);
+      const status=document.createElement('p'); status.className='course-info'; status.dataset.missionStatus=mission.id;
+      card.append(name,description,assembly,progress,status); extra.append(card);
+    }
+  }
+  if (station.id==='academy' || station.id==='science') {
+    const extra=q(section,'.station-extra');
+    const info=document.createElement('p'); info.className='course-info'; info.id=`${station.id}-cycle-info`;
+    const timers=document.createElement('div'); timers.className='producer-timers'; timers.id=`${station.id}-timers`;
+    const note=document.createElement('p'); note.className='small';
+    note.textContent='Each team runs independently and repeats automatically. Pay once to add capacity. No recurring costs; practice and Insight increase rewards, keeping the timer unchanged. Fractional rewards carry into future completions.';
+    extra.append(info,timers,note);
   }
   const purchases=q(section,'.station-purchases');
   const label=document.createElement('p'); label.className='section-label'; label.textContent='Invest in this station'; purchases?.append(label);
@@ -192,7 +201,7 @@ for (const station of definitions.stations) {
     const effect=document.createElement('p'); effect.textContent=item.effect;
     const gain=document.createElement('p'); gain.className='purchase-gain';
     const button=document.createElement('button'); button.dataset.buy=item.id;
-    const verb=document.createElement('span'); verb.textContent=item.kind==='appointment'?'Appoint permanently':item.kind==='producer'?'Add producer':item.kind==='unlock'?'Unlock':item.kind==='discovery'?'Research':'Improve';
+    const verb=document.createElement('span'); verb.textContent=item.id===definitions.finale.investmentId?'Begin synthesis':item.kind==='appointment'?'Appoint permanently':item.kind==='producer'?'Add producer':item.kind==='unlock'?'Unlock':item.kind==='discovery'?'Research':'Improve';
     const cost=document.createElement('small'); button.append(verb,cost);
     button.addEventListener('click',() => send({type:'buyInvestment',investmentId:item.id}));
     const reason=document.createElement('span'); reason.className='blocked';
@@ -212,7 +221,7 @@ for (const upgrade of definitions.insightUpgrades) {
   card.append(title,description,current,button); el('insight-upgrades').append(card);
 }
 /** @type {Record<import('../core/types.js').StatId,string>} */
-const statNames={observing:'Data',analysis:'Knowledge',outreach:'Interest',support:'Funding',teaching:'Teaching',research:'Expertise',science:'Study work'};
+const statNames={observing:'Data',analysis:'Knowledge',outreach:'Interest',support:'Funding',teaching:'Graduates per cycle',research:'Expertise',science:'Publications per cycle',engineering:'Engineering',collaboration:'Collaboration Credits per cycle'};
 function renderPrestige() {
   const preview=getSummary(game,definitions,balance).prestige;
   const shop=game.state.insight.phase==='shop';
@@ -235,7 +244,10 @@ function renderPrestige() {
   el('prestige-payout').textContent=`${balance.prestige.baseAward} base Insight, with diminishing rewards for additional Publications: 2 Publications → ${balance.prestige.baseAward+1}, 5 → ${balance.prestige.baseAward+2}, 10 → ${balance.prestige.baseAward+3}. Your next reward increase is at ${preview.nextPublicationThreshold} Publications.`;
   const loss=preview.losses;
   el('prestige-losses').textContent=`You will lose: ${price(Object.fromEntries(Object.entries(loss.resources).filter(([key,value])=>value>0 || ['D','F','K','I','X'].includes(key))))}; ${loss.purchases} purchased levels, including ${loss.producers} producer purchases; ${loss.stations} station unlocks; ${loss.telescopes} telescopes; ${loss.people} trained people; ${loss.discoveries} journal discoveries; ${loss.publications} Publications and ${loss.grants} grants. Current run time: ${fmt(preview.seconds/60)} minutes.`;
-  el('prestige-work-loss').textContent=[loss.course?`Paid course progress ${fmt(loss.course.progress)}/${balance.course.work} will be lost.`:'No course is underway.',loss.program?`Paid study progress ${fmt(loss.program.progress)}/${definitions.programs.find(program=>program.id===loss.program?.id)?.work} will be lost.`:'No study is underway.'].join(' ');
+  el('prestige-work-loss').textContent=`${loss.classrooms} classroom(s) and ${loss.researchTeams} research team(s), all timer progress (including space missions), and fractional rewards (${fmt(loss.academy.remainder)} graduates, ${fmt(loss.science.remainder)} Publications) will be lost.`;
+  const missionLosses=Object.entries(loss.missions).map(([id,state])=>`${definitions.missions.find(mission=>mission.id===id)?.name}: ${fmt(state.progress)} s cycle progress and ${fmt(state.remainder)} fractional Publications`);
+  if (missionLosses.length) el('prestige-work-loss').textContent+=` Space missions reset: ${missionLosses.join('; ')}.`;
+  if (Object.keys(loss.joint.programs).length || loss.joint.finaleProgress!==null) el('prestige-work-loss').textContent+=` Joint science resets: ${Object.keys(loss.joint.programs).length} programs, their timer progress and fractional rewards, plus ${loss.joint.completedAtTick!==null?'the completed synthesis':loss.joint.finaleProgress!==null?fmt(loss.joint.finaleProgress)+' s of final synthesis progress':'any synthesis progress'}.`;
   const confirm=/** @type {HTMLButtonElement} */(el('confirm-prestige'));
   confirm.disabled=awaitingNewRun || !preview.eligible; confirm.textContent=`Reset everything & earn ${preview.award} Insight`;
   el('insight-wallet').textContent=`${insight.points} Insight available · +${insight.lastAward} earned from the previous run`;
@@ -248,7 +260,7 @@ function renderPrestige() {
     button.disabled=awaitingNewRun || !quote.ok;
     button.textContent=level>=upgrade.maxLevel?'Fully purchased':`Buy level ${level+1} · ${price(quote.costs)}`;
     q(document,`[data-insight-effect="${upgrade.id}"]`).textContent=`Level ${level}/${upgrade.maxLevel} · ${upgrade.stats.map(stat=>{
-      const current=insightMultiplier(game,definitions,stat);return `${statNames[stat]} ×${fmt(current)} → ×${fmt(current*upgrade.factor)}`;
+      const current=insightMultiplier(game,definitions,stat);return `${statNames[stat]} ×${fmt(current)} → ×${fmt(current*(upgrade.factors?.[stat]??upgrade.factor))}`;
     }).join(' · ')}${shop && !quote.ok && level<upgrade.maxLevel?' · '+quote.blockedReasons.join(' · '):''}`;
   }
 }
@@ -265,6 +277,8 @@ function render() {
   if (hasPrerequisite(game,'support-office')) balances.push(['Funding',game.state.resources.F,`+${fmt(summary.rates.F??0)}/s`]);
   if (hasPrerequisite(game,'academy')) balances.push(['Unassigned people',summary.population.available,`${summary.population.total} trained · ${summary.population.appointed} appointed`]);
   if (hasPrerequisite(game,'research')) balances.push(['Expertise',game.state.resources.X,`+${fmt(summary.rates.X??0)}/s`]);
+  if (hasPrerequisite(game,'engineering')) balances.push(['Engineering Progress',game.state.resources.E,`+${fmt(summary.rates.E??0)}/s`]);
+  if (hasPrerequisite(game,'joint-science')) balances.push(['Collaboration Credits',game.state.resources.C,`${fmt(summary.rates.C??0)}/s average`]);
   if (hasPrerequisite(game,'photometry')) balances.push(['Publications',game.state.science.publications,`${summary.grants.active} / ${summary.grants.capacity} grants`]);
   el('balances').replaceChildren(...balances.map(([name,value,note]) => {
     const node=document.createElement('div'); node.className='balance';
@@ -275,30 +289,46 @@ function render() {
   }));
   el('objective').textContent=summary.guidance.objective;
   el('suggestion').textContent=summary.guidance.suggestion;
+  const next=definitions.investments.find(item=>item.id===summary.guidance.nextId);
+  if (next && next.requires.every(id=>hasPrerequisite(game,id))) {
+    const quote=quoteCommand(game,definitions,balance,{type:'buyInvestment',investmentId:next.id});
+    let savingSeconds=0;
+    for (const [currency,cost] of Object.entries(quote.costs)) {
+      const available=currency==='N'?summary.population.available:game.state.resources[/** @type {import('../core/types.js').StockId} */(currency)]??0;
+      const needed=Math.max(0,cost-available);
+      const income=currency==='N'?summary.rates.training??0:summary.rates[/** @type {import('../core/types.js').StockId} */(currency)]??0;
+      if (needed>0) savingSeconds=Math.max(savingSeconds,income>0?needed/income:Infinity);
+    }
+    if (savingSeconds>=60 && Number.isFinite(savingSeconds)) {
+      el('suggestion').textContent=`At current passive income, about ${fmt(savingSeconds/60)} min to afford ${next.name}. Expand production or keep saving.${summary.prestige.eligible?` Prestige is also available (+${summary.prestige.award} Insight). The next milestone remains reachable without resetting.`:''}`;
+    }
+  }
+
   for (const station of summary.stations) {
     const node=el(`station-${station.id}`); node.hidden=!station.visible;
     const body=/** @type {HTMLElement} */(q(node,'.station-body')); body.hidden=!station.open;
     const income=q(node,'.station-income');
     let amount=0; let rate=0; let caption=station.output;
     if (station.id==='observatory') { amount=game.state.resources.D; rate=summary.rates.D??0; }
+    else if (station.id==='radio' || station.id==='space') { amount=game.state.resources.D; rate=summary.branches[station.id].rate; caption='Data · shared network balance'; }
     else if (station.id==='science') { amount=game.state.science.publications; rate=summary.rates.science??0; }
     else if (station.id==='academy') { amount=summary.population.available; rate=summary.rates.training??0; caption=summary.population.available===1?'unassigned person':'unassigned people'; }
     else {
-      const key=/** @type {import('../core/types.js').StockId} */(({analysis:'K',outreach:'I',support:'F',research:'X'})[station.id]);
+      const key=/** @type {import('../core/types.js').StockId} */(({analysis:'K',outreach:'I',support:'F',research:'X',engineering:'E',joint:'C'})[station.id]);
       amount=game.state.resources[key]; rate=summary.rates[key]??0;
     }
     q(income,'strong').textContent=fmt(amount); q(income,'span').textContent=caption;
-    q(income,'small').textContent=station.id==='science'?`${fmt(rate)} study work/s · ${summary.program?'study underway':'ready for a paid study'}`:station.id==='academy'?`${fmt(rate)} teaching work/s · ${summary.population.total} total trained`:`+${fmt(rate)}/s passive`;
+    q(income,'small').textContent=station.id==='joint'?`${fmt(rate)}/s average · rewards arrive at cycle completion`:station.id==='science'?`${fmt(rate)} Publications/s average · ${summary.science.timers.length} ground teams · ${summary.missions.filter(mission=>mission.state).length} space missions · ${summary.joint.programs.filter(program=>program.state).length} joint programs`:station.id==='academy'?`${fmt(rate)} graduates/s average · ${summary.population.total} total trained`:`+${fmt(rate)}/s passive`;
   }
   for (const action of definitions.actions) {
     const button=/** @type {HTMLButtonElement} */(q(document,`[data-action="${action.id}"]`));
     const visible=meets(action.requires);
     button.hidden=!visible;
     const help=/** @type {HTMLElement} */(q(document,`[data-action-help="${action.id}"]`)); help.hidden=!visible;
-    button.disabled=awaitingNewRun || Boolean(action.output.training && !game.state.course || action.output.science && !game.state.science.program);
+    button.disabled=awaitingNewRun;
     const output=scaledOutput(game,definitions,action.output);
-    q(button,'span').textContent=Object.entries(output).map(([key,value])=>`+${fmt(value)} ${key==='training'?'course work':key==='science'?'study work':currencyName(definitions,key)}`).join(', ');
-    help.textContent=action.output.training && !game.state.course?'Enroll a prepaid course to begin. Existing staff keep working.':action.output.science && !game.state.science.program?'Start a prepaid study below. Each completed sample publishes once.':`Hold for up to ${Object.entries(output).map(([key,value])=>`${fmt(value*4)} ${key==='training' || key==='science'?'work':currencyName(definitions,key)}/s`).join(', ')} extra. Passive stations keep running.`;
+    q(button,'span').textContent=Object.entries(output).map(([key,value])=>`+${fmt(value)} ${currencyName(definitions,key)}`).join(', ');
+    help.textContent=`Hold for up to ${Object.entries(output).map(([key,value])=>`${fmt(value*4)} ${currencyName(definitions,key)}/s`).join(', ')} extra. Passive stations keep running.`;
   }
   for (const item of definitions.investments) {
     const row=/** @type {HTMLElement} */(q(document,`[data-investment="${item.id}"]`));
@@ -313,13 +343,15 @@ function render() {
     q(row,'.blocked').textContent=quote.ok?'':quote.blockedReasons.join(' · ');
     button.setAttribute('aria-label',`${item.name} · ${price(quote.costs)}`);
     const gain=previewInvestment(game,definitions,balance,item.id);
-    const parts=Object.entries(gain.passive).map(([key,value])=>`+${fmt(value)} ${key==='training'?'teaching work':key==='science'?'study work':currencyName(definitions,key)}/s`);
+    const parts=Object.entries(gain.passive).map(([key,value])=>`+${fmt(value)} ${key==='training'?'graduates on average':key==='science'?'Publications on average':currencyName(definitions,key)}/s`);
     if (gain.activeGain>1e-9) parts.push(`${gain.actionName}: +${fmt(gain.activeGain)} more/action`);
     if (gain.analysisGain>1e-9) parts.push(`Analyze 10: +${fmt(gain.analysisGain)} more Knowledge`);
     q(row,'.purchase-gain').textContent=parts.length?`This purchase: ${parts.join(' · ')}`:'';
   }
+  el('heading-observatory').textContent=summary.observing.current.name;
+  renderObservatory(el('observatory-network'),summary.observing);
   el('observing-breakdown').textContent=`Frontier: ${summary.frontier.name} ×${fmt(summary.frontier.yield)} · ${fmt(summary.observing.capacity)} installed capacity × ${fmt(summary.observing.bonus)} production bonus = ${fmt(summary.rates.D??0)} Data/s.`;
-  el('observing-owned').textContent=`${summary.observing.telescopes} telescope${summary.observing.telescopes===1?'':'s'} retained · ${getPurchaseCount(game,'additional-telescope')} additional · ${getPurchaseCount(game,'appoint-observer')} observers · ${hasPrerequisite(game,'reflector')?'reflector installed':'founding backyard setup'}.`;
+  el('observing-owned').textContent=`${summary.observing.telescopes} telescope${summary.observing.telescopes===1?'':'s'} retained · ${getPurchaseCount(game,'additional-telescope')} additional · ${getPurchaseCount(game,'appoint-observer')} observers · ${summary.observing.facilities.filter(facility=>facility.id && facility.built).length} facilities built.`;
   el('analysis-yield').textContent=`One Data balance: ${fmt(game.state.resources.D)} available. Instant yield: ${fmt(analysisYield(game,definitions,balance))} Knowledge/Data.`;
   document.querySelectorAll('[data-process]').forEach(node=>{
     const button=/** @type {HTMLButtonElement} */(node);
@@ -327,28 +359,60 @@ function render() {
     button.textContent=`Analyze ${button.dataset.process==='all'?'all':'10 Data'} → ${fmt(quantity*analysisYield(game,definitions,balance))} Knowledge now`;
     button.disabled=awaitingNewRun || !quoteCommand(game,definitions,balance,{type:'processData',quantity}).ok;
   });
-  for (const program of definitions.programs) {
-    const button=/** @type {HTMLButtonElement} */(q(document,`[data-start-program="${program.id}"]`));
-    const quote=quoteCommand(game,definitions,balance,{type:'startProgram',programId:program.id});
-    const active=summary.program?.id===program.id?summary.program:null;
-    button.disabled=awaitingNewRun || !quote.ok;
-    button.textContent=active?'Study underway':`Start study · ${price(quote.costs)}`;
-    const progress=/** @type {HTMLProgressElement} */(q(document,`[data-program-progress="${program.id}"]`));
-    progress.hidden=!active; progress.value=active?.progress??0;
-    q(document,`[data-program-status="${program.id}"]`).textContent=active?`${fmt(active.progress)} / ${active.required} work · ${fmt((active.required-active.progress)/active.rate)} s at passive speed · fully paid`:
-      quote.ok?'Ready to start. Completed studies publish automatically.':quote.blockedReasons.join(' · ');
+  for (const kind of /** @type {const} */(['academy','science'])) {
+    const cycle=summary[kind];
+    const noun=kind==='academy'?'graduate':'Publication';
+    el(`${kind}-cycle-info`).textContent=`${kind==='science'?(hasPrerequisite(game,'stellar-spectroscopy')?'Brightness and stellar spectra':definitions.programs[0].name)+' · ':''}${cycle.timers.length} independent ${kind==='academy'?'classrooms':'research teams'} · ${fmt(cycle.reward)} ${noun}(s) per ${cycle.seconds}-second cycle · ${fmt(cycle.remainder)} fractional ${noun}(s) saved.`;
+    const list=el(`${kind}-timers`);
+    while (list.children.length>cycle.timers.length) list.lastElementChild?.remove();
+    for (let i=0;i<cycle.timers.length;i++) {
+      let row=list.children[i];
+      if (!row) {
+        row=document.createElement('div'); row.className='producer-timer';
+        const label=document.createElement('span');
+        const progress=document.createElement('progress');
+        row.append(label,progress); list.append(row);
+      }
+      const label=`${kind==='academy'?'Classroom':'Research team'} ${i+1}`;
+      q(row,'span').textContent=`${label} · ${fmt(cycle.seconds-cycle.timers[i])} s remaining`;
+      const progress=/** @type {HTMLProgressElement} */(q(row,'progress'));
+      progress.max=cycle.seconds; progress.value=cycle.timers[i]; progress.setAttribute('aria-label',`${label} cycle progress`);
+    }
   }
+  el('radio-capacity').textContent=`${fmt(summary.branches.radio.capacity)} radio capacity · ${1*(game.state.purchases['radio-observatory']??0)+(game.state.purchases['radio-dish']??0)} dishes · Data joins the same wallet used by Analysis.`;
+  const assemblyStages={orbital:['space-program','orbital-platform','orbital-payload','orbital-commissioning'],infrared:['infrared-program','infrared-mirror','infrared-shield','infrared-commissioning']};
+  for (const mission of summary.missions) {
+    const stages=assemblyStages[/** @type {'orbital'|'infrared'} */(mission.id)];
+    const completed=stages.filter(id=>hasPrerequisite(game,id)).length;
+    const next=stages.find(id=>!hasPrerequisite(game,id));
+    const card=q(document,`[data-mission="${mission.id}"]`);
+    /** @type {HTMLElement} */(card).hidden=mission.id==='infrared' && !hasPrerequisite(game,'orbital-commissioning');
+    q(card,'[data-assembly]').textContent=mission.state?'Commissioned · repeats automatically with no upkeep':`${completed} / ${stages.length} construction stages · next: ${definitions.investments.find(item=>item.id===next)?.name??'commissioning'}`;
+    const progress=/** @type {HTMLProgressElement} */(q(card,'progress')); progress.hidden=!mission.state; progress.value=mission.state?.progress??0;
+    q(card,'[data-mission-status]').textContent=mission.state?`${fmt(mission.seconds-mission.state.progress)} s remaining · ${fmt(mission.reward)} Publications per ${mission.seconds}-second cycle · ${mission.state.cycles} completed · ${fmt(mission.state.remainder)} fractional Publications saved.`:
+      mission.id==='infrared' && !hasPrerequisite(game,'orbital-result')?'The first orbital telescope must complete one science cycle before the separate flagship can begin.':'Complete the construction purchases below. Science begins at commissioning.';
+  }
+  for (const program of summary.joint.programs) {
+    const card=q(document,`[data-joint-program="${program.id}"]`);
+    const progress=/** @type {HTMLProgressElement} */(q(card,'progress'));
+    progress.hidden=!program.state; progress.value=program.state?.progress??0;
+    const quote=quoteCommand(game,definitions,balance,{type:'buyInvestment',investmentId:program.investmentId});
+    q(card,'[data-joint-status]').textContent=program.state
+      ?`${fmt(program.seconds-program.state.progress)} s remaining · ${fmt(program.creditReward)} Credits + ${fmt(program.publicationReward)} Publications per ${program.seconds}-second cycle · ${program.state.cycles} results · fractional rewards: ${fmt(program.state.remainder)} Credits, ${fmt(program.state.publicationRemainder)} Publications.`
+      :`${price(quote.costs)}, paid once. ${quote.ok?'Establish this program below to start its automatic cycles.':quote.blockedReasons.join(' · ')}`;
+  }
+  const completed=summary.joint.programs.filter(program=>(program.state?.cycles??0)>0).length;
+  el('synthesis-requirements').textContent=`${completed} / ${summary.joint.programs.length} joint programs have returned results. All three contribute to the final synthesis.`;
+  const synthesisProgress=/** @type {HTMLProgressElement} */(el('synthesis-progress'));
+  synthesisProgress.max=summary.joint.finale.seconds; synthesisProgress.value=summary.joint.finaleProgress??0; synthesisProgress.hidden=summary.joint.finaleProgress===null;
+  el('synthesis-status').textContent=summary.joint.completedAtTick!==null?'Synthesis complete. Your observatories continue producing.'
+    :summary.joint.finaleProgress!==null?`${fmt(summary.joint.finale.seconds-summary.joint.finaleProgress)} s remaining · fixed ${summary.joint.finale.seconds}-second synthesis · paid in full; all stations continue.`
+    :`Once every program returns a result, begin the synthesis below. It takes ${summary.joint.finale.seconds} seconds with no recurring costs.`;
+  el('ending-receipt').hidden=summary.joint.completedAtTick===null;
+  el('ending-time').textContent=summary.joint.completedAtTick===null?'':`Completed in run ${game.state.clock.campaignIndex} after ${fmt(summary.joint.completedAtTick*TICK_SECONDS/60)} simulated minutes.`;
+  el('continue-observing').hidden=running;
   el('grant-status').hidden=!hasPrerequisite(game,'first-publication');
-  el('grant-status').textContent=`${summary.grants.active} / ${summary.grants.capacity} Publication-backed grants · ${summary.grants.capacity-summary.grants.active} available slots. Each completed study opens one more slot. Publications are not spent; grants have no upkeep.`;
-  const enroll=/** @type {HTMLButtonElement} */(el('enroll'));
-  const enrollment=quoteCommand(game,definitions,balance,{type:'enrollCourse'});
-  enroll.disabled=awaitingNewRun || !enrollment.ok; enroll.textContent=summary.course?'Course underway':`Enroll one · ${price(enrollment.costs)}`;
-  const progress=/** @type {HTMLProgressElement} */(el('course-progress')); progress.hidden=!summary.course; progress.value=summary.course?.progress??0;
-  el('course-status').textContent=summary.course?`${fmt(summary.course.progress)} / ${summary.course.required} work · ${fmt(Math.max(0,summary.course.required-summary.course.progress)/summary.course.rate)} s at passive teaching speed · fully paid`:enrollment.ok?'Ready to enroll. Appointments stay at their stations.':enrollment.blockedReasons.join(' · ');
-  const limits=summary.academy;
-  el('course-limit').textContent=limits.teachingLimited
-    ?`At passive income, teaching is the limit: ${fmt(limits.courseSeconds)} s/course versus ${fmt(limits.supplySeconds)} s to replace enrollment costs. A teacher can speed future recruitment.`
-    :`At passive income, ${currencyName(definitions,limits.limitingCurrency)} is the enrollment limit${Number.isFinite(limits.supplySeconds)?` (${fmt(limits.supplySeconds)} s to replace costs; ${fmt(limits.courseSeconds)} s to teach)`:': no passive income yet'}. Grow that station before adding more teachers. Current savings and active help can cover the gap.`;
+  el('grant-status').textContent=`${summary.grants.active} / ${summary.grants.capacity} Publication-backed grants · ${summary.grants.capacity-summary.grants.active} available slots. Publications are not spent; grants have no upkeep.`;
   el('journal').replaceChildren(...(game.state.journal.length?game.state.journal.map(id => {
     const node=document.createElement('li'); node.textContent=definitions.targets.find(target => target.id===id)?.claim??id; return node;
   }):[Object.assign(document.createElement('li'),{textContent:'New research discoveries will appear here.'})]));
@@ -356,6 +420,7 @@ function render() {
   renderPrestige();
 }
 
+el('continue-observing').addEventListener('click',()=>{if (awaitingNewRun || reviewingPrestige || game.state.insight.phase==='shop') return; running=true; accumulator=0; persist(); render();});
 el('pause').addEventListener('click',() => { if (awaitingNewRun || reviewingPrestige || game.state.insight.phase==='shop') return; stopHold(); running=!running; accumulator=0; persist(); render(); });
 document.querySelectorAll('[data-speed]').forEach(node => node.addEventListener('click',() => {
   speed=Number(/** @type {HTMLElement} */(node).dataset.speed);

@@ -10,7 +10,7 @@ import { SAVE_SCHEMA_VERSION, SIMULATION_VERSION } from './versions.js';
  * @param {import('./types.js').InsightState} [insight] @returns {import('./types.js').State} */
 export function createRunState(balance,campaignIndex=1,insight={points:0,totalEarned:0,upgrades:{},phase:'playing',lastAward:0}) {
   return {clock:{tick:0,campaignIndex},insight,resources:{...balance.startingStocks},purchases:{},population:{total:0},
-    course:null,science:{publications:0,program:null},journal:['moon'],nextActionTick:0,modified:false};
+    academy:{timers:[],remainder:0},science:{publications:0,timers:[],remainder:0},missions:{},joint:{programs:{},finaleProgress:null,completedAtTick:null},journal:['moon'],nextActionTick:0,modified:false};
 }
 
 /** @param {import('./types.js').Definitions} [definitions] @param {import('./types.js').Balance} [balance]
@@ -34,19 +34,39 @@ export function serializeGame(game,definitions=defaultDefinitions,balance=defaul
 export function deserializeGame(json,definitions=defaultDefinitions,balance=defaultBalance) {
   let candidate;
   try { candidate=JSON.parse(json); } catch { throw new ValidationError('save','invalid JSON'); }
-  // Preserve the exact bundled P5 single-Data and P6 program economies.
+  // Migrate only exact bundled prior configurations; retain their economic progress.
   const previousSingleData=candidate?.schemaVersion===6 && candidate.contentVersion==='0.7.0-single-data'
     && candidate.simulationVersion==='0.7.0-single-data' && candidate.balanceId==='single-data-v1' && candidate.balanceHash==='fnv1a32-4f42765e';
   const previousPrograms=candidate?.schemaVersion===7 && candidate.contentVersion==='0.8.0-programs'
     && candidate.simulationVersion==='0.8.0-programs' && candidate.balanceId==='programs-v1' && candidate.balanceHash==='fnv1a32-dc9d1e78';
-  if ((previousSingleData || previousPrograms) && definitions===defaultDefinitions && balance===defaultBalance) {
+  const previousInsight=candidate?.schemaVersion===8 && candidate.contentVersion==='0.9.0-insight'
+    && candidate.simulationVersion==='0.9.0-insight' && candidate.balanceId==='insight-v1' && candidate.balanceHash==='fnv1a32-a0c29bc6';
+  const previousParallel=candidate?.schemaVersion===9 && candidate.contentVersion==='0.10.0-parallel'
+    && candidate.simulationVersion==='0.10.0-parallel' && candidate.balanceId==='parallel-v1' && candidate.balanceHash==='fnv1a32-bef188b1';
+  const previousEngineering=candidate?.schemaVersion===10 && candidate.contentVersion==='0.11.0-engineering'
+    && candidate.simulationVersion==='0.11.0-engineering' && candidate.balanceId==='engineering-v1' && candidate.balanceHash==='fnv1a32-aeaacb8c';
+  const previousHorizons=candidate?.schemaVersion===11 && candidate.contentVersion==='0.12.0-horizons'
+    && candidate.simulationVersion==='0.12.0-horizons' && candidate.balanceId==='horizons-v1' && candidate.balanceHash==='fnv1a32-575bb458';
+  const previousSynthesis=candidate?.schemaVersion===12 && candidate.contentVersion==='0.13.0-synthesis'
+    && candidate.simulationVersion==='0.13.0-synthesis' && candidate.balanceId==='synthesis-v1' && candidate.balanceHash==='fnv1a32-7c876725';
+  if ((previousSingleData || previousPrograms || previousInsight || previousParallel || previousEngineering || previousHorizons || previousSynthesis) && definitions===defaultDefinitions && balance===defaultBalance) {
     candidate.schemaVersion=SAVE_SCHEMA_VERSION;
     candidate.contentVersion=definitions.contentVersion;
     candidate.balanceId=balance.id;
     candidate.balanceHash=getBalanceHash(balance,definitions);
     candidate.simulationVersion=SIMULATION_VERSION;
+    if (!previousSynthesis) candidate.state.joint={programs:{},finaleProgress:null,completedAtTick:null};
+    if (!previousHorizons && !previousSynthesis) candidate.state.missions={};
     if (previousSingleData) candidate.state.science={publications:0,program:null};
-    candidate.state.insight={points:0,totalEarned:0,upgrades:{},phase:'playing',lastAward:0};
+    if (!previousInsight && !previousParallel && !previousEngineering && !previousHorizons && !previousSynthesis) candidate.state.insight={points:0,totalEarned:0,upgrades:{},phase:'playing',lastAward:0};
+    if (!previousParallel && !previousEngineering && !previousHorizons && !previousSynthesis) {
+      const old=candidate.state;
+      const classrooms=old.purchases.academy?1+(old.purchases['appoint-teacher']??0):0;
+      const teams=old.purchases.photometry?1+(old.purchases['appoint-scientist']??0):0;
+      old.academy={timers:Array.from({length:classrooms},(_,i)=>i===0?Math.min(old.course?.progress??0,39.75):0),remainder:0};
+      old.science={publications:old.science.publications,timers:Array.from({length:teams},(_,i)=>i===0?Math.min(old.science.program?.progress??0,59.75):0),remainder:0};
+      delete old.course;
+    }
   }
   if (candidate?.schemaVersion !== SAVE_SCHEMA_VERSION) {
     throw new ValidationError('save','This save uses a different economy. Keep the export and start a new station prototype.');

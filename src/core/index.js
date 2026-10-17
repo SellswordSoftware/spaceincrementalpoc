@@ -1,5 +1,5 @@
 // Runtime-neutral entry point shared by browser and headless scenarios.
-export const prototypeInfo = Object.freeze({title:'Eyes on the Universe',stage:'P7 — Full-reset Insight prestige'});
+export const prototypeInfo = Object.freeze({title:'Eyes on the Universe',stage:'P13 — Continuous progression and optional prestige'});
 export { definitions } from '../definitions/content.js';
 export { balance } from '../definitions/balance.js';
 export { createGame, serializeGame, deserializeGame } from './state.js';

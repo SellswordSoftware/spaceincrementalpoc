@@ -431,3 +431,110 @@ P6 and earlier single-Data saves migrate without losing ordinary progress. Prest
 is a deliberate in-game reset with a preview; loading an old save is not prestige.
 The next work is player review and focused P8/P9 measurement/tuning before expanding
 later facilities and observing content.
+
+
+## Player review: parallel academy and science — 2026-10-16
+
+The player found the network enjoyable and accepted fast prototype pacing for easier
+test plays. General slowdown is deferred. Academy and science speed upgrades made
+prepaid jobs nearly instant, turning their interfaces into restart-button spam.
+
+Implemented correction: permanent independent repeating producers, 40-second
+classrooms and 60-second science teams. Founding producers come with unlocks;
+additional teams require one permanent graduate plus escalating stock costs (×1.6).
+Practice/Insight increase cycle rewards with fractional carry, never shorten timers.
+No enrollment/restart/assist commands or automatic wallet spending. Interest retains
+its supporter-group role and contributes once when opening the academy. All lanes,
+progress and fractional rewards reset at prestige; Insight retains its existing rules.
+
+Exact bundled P5–P7 save migration converts staff to teams and unfinished work into
+founding-timer progress, preserving ordinary wallets and P7 Insight. The existing
+single progression test is adapted rather than creating a broad test suite. Current
+reference network timing is 718.25 seconds initially and 453.25 with the same selected
+Insight upgrades; these are testing observations, not final balance targets.
+
+
+## P10: engineering and facilities — 2026-10-16
+
+Player review accepted several prestiges and the revised asynchronous timers.
+Proceed with P10 while retaining quick prototype pacing. The basic network remains
+the first-prestige cycle; Engineering becomes available after first Insight and
+rebuilding a grant network.
+
+Implemented an independent Engineering Progress station with permanent benches,
+engineers, Expertise-funded practice and click/hold assistance. E funds permanent
+facilities/instruments without operating drains. Enclosure, robotic dome, expanded
+observatory and mountain telescope add 4/8/16/32 base observing capacity. A small
+architectural plate accumulates facilities and the instrument count remains accurate.
+Galaxy and galaxy-cluster discoveries extend the single-Data frontier to ×13/×21.
+Optional spectroscopy adds Publication rewards without shrinking/restarting timers.
+All new ordinary progress resets at prestige; the initial eligibility/payout remains.
+
+Schema 10 migrates exact prior parallel saves with every state field unchanged;
+earlier bundled migrations remain supported. The existing single integration test
+extends through P10 and another reset. The scripted second run reaches the mountain
+frontier at 584 simulated seconds (130.75 seconds beyond its basic rebuilt network).
+These numbers are playtest aids, not final balance targets. P11 radio/space remains.
+
+
+## P11: radio and separate orbital missions — 2026-10-16
+
+Implemented Radio after the mountain network: permanent dishes feed shared Data,
+radio-source research expands the frontier and radio timing improves science rewards.
+Space has separate program/platform/payload/commissioning stages for first orbit;
+then a distinct infrared program/mirror/shield/commissioning chain. First orbit
+immediately produces Data and starts an automatic 60-second Publication cycle.
+A completed orbital result and transit frontier are required before flagship work.
+The flagship adds capacity and an independent cycle, keeping all prior production.
+
+Both mission timers remain 60 seconds under practice/Insight; rewards carry fractions.
+No recurring spending, restart clicks, allocations or new currency. Frontiers extend
+×21 → ×34 → ×55 → ×89 → ×144. Mission progress, results and all hardware reset at
+prestige. P10 saves migrate with unchanged prior state plus empty mission records.
+The existing single integration test extends through both missions, resumed timers
+and full reset. Reference route reaches first orbit at 686.5 seconds and deep fields
+at 883 seconds in run two; pacing remains deliberately fast for prototype playtests.
+
+
+## P12: joint science and a finite ending — 2026-10-16
+
+Implemented a Joint Science center revealed by the first orbital result. Three
+permanently established programs connect ground photometry/radio timing, orbital
+monitoring/stellar spectra and mountain/infrared deep-field capabilities. Independent
+60-second cycles produce Collaboration Credits and Publications with fractional
+carry and no recurring input drain. Credits buy network improvements; Expertise and
+Connected thinking improve Credit output. Cycle durations remain fixed.
+
+After each program returns a result, a paid 90-second synthesis completes the
+prototype journey. Completion is recorded once and pauses the browser for an ending;
+continued observing and prestige remain available. Completion is ordinary run progress:
+prestige resets it, all joint timers/rewards and Credits. Insight rules are unchanged.
+P11 saves migrate with prior state unchanged plus an empty joint-science state.
+
+The existing single integration test extends through Credit production/spending,
+fixed timers, mid-synthesis save/reload, the exact completion boundary, continued
+production and a full reset. Reference completion is 1223.75 simulated seconds in
+run two, 340.75 seconds after P11. Fast prototype pacing remains intentional.
+
+
+## P13 player feedback: optional prestige and interleaved facilities — 2026-10-17
+
+Player found that the prior first-Insight Engineering gate forced prestige, classroom
+expansion overproduced people, and facilities arrived in a late burst. Corrected the
+interpretation: every system and the ending are reachable on run one; prestige is
+an economic shortcut through rising prices, never a capability gate.
+
+Engineering now follows tracking (30 F + 15 K, 0.15 E/s). Enclosure follows reflector,
+dome follows Research, expansion follows nebulae/first Publication, mountain follows
+galaxy research. Later radio/space stages have steeper E/F/K costs. Next-milestone
+advice shows estimated passive saving time and the optional Insight reset.
+
+Classroom stock prices grow ×3, teaching practice adds 25% base rewards, Institutional
+memory gives ×1.2 teaching per level and Connected thinking ×1.05 teaching; their
+other modifiers are unchanged. No caps or recurring tuition. Old people, classrooms,
+Insight levels and all saved progress remain; revised prices/yields apply forward.
+
+Schema 13 preserves exact P12 state. The existing single integration test now proves
+ending access with zero prestige and ordered facility milestones. Reference continuous
+completion is 5516 seconds; one-reset completion including the first run is 4399.25
+seconds (rebuilt run 3512.75). These are economic pacing observations, not final balance.

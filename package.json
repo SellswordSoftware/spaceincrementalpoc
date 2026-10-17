@@ -11,7 +11,11 @@
     "check": "tsc -p jsconfig.json && tsc -p tools/jsconfig.json",
     "test": "node --test",
     "scenario:stations": "node scenarios/stations.js",
-    "scenario:prestige": "node scenarios/prestige.js"
+    "scenario:prestige": "node scenarios/prestige.js",
+    "scenario:engineering": "node scenarios/engineering.js",
+    "scenario:horizons": "node scenarios/horizons.js",
+    "scenario:synthesis": "node scenarios/synthesis.js",
+    "scenario:progression": "node scenarios/progression.js"
   },
   "devDependencies": {
     "@types/node": "24.12.4",

@@ -5,15 +5,18 @@
 export function getPurchaseCount(game,id) { return game.state.purchases[id] ?? 0; }
 /** @param {GameState} game @param {string} id */
 export function hasPrerequisite(game,id) {
+  if (id.startsWith('joint-result-')) return (game.state.joint.programs[id.slice(13)]?.cycles??0)>0;
+  if (id==='orbital-result') return (game.state.missions.orbital?.cycles??0)>0;
+  if (id==='infrared-result') return (game.state.missions.infrared?.cycles??0)>0;
   if (id==='first-publication') return game.state.science.publications>0;
   return id==='first-graduate'?game.state.population.total>0:getPurchaseCount(game,id)>0;
 }
 /** @param {Definitions} definitions @param {string} id */
-export function prerequisiteName(definitions,id) { return definitions.investments.find(item=>item.id===id)?.name ?? (id==='first-graduate'?'first graduate':id==='first-publication'?'first Publication':id); }
+export function prerequisiteName(definitions,id) { return definitions.investments.find(item=>item.id===id)?.name ?? (id.startsWith('joint-result-')?`first result from ${definitions.jointPrograms.find(program=>program.id===id.slice(13))?.name??id}`:null) ?? (id==='orbital-result'?'first completed orbital science cycle':id==='infrared-result'?'first completed infrared science cycle':id==='first-graduate'?'first graduate':id==='first-publication'?'first Publication':id); }
 /** Permanent Insight factors multiply the ordinary run's local bonuses.
  * @param {GameState} game @param {Definitions} definitions @param {import('./types.js').StatId} stat */
 export function insightMultiplier(game,definitions,stat) {
-  return definitions.insightUpgrades.reduce((factor,item)=>factor*(item.stats.includes(stat)?item.factor**(game.state.insight.upgrades[item.id]??0):1),1);
+  return definitions.insightUpgrades.reduce((factor,item)=>factor*(item.stats.includes(stat)?(item.factors?.[stat]??item.factor)**(game.state.insight.upgrades[item.id]??0):1),1);
 }
 /** @param {GameState} game @param {Definitions} definitions @param {import('./types.js').StatId} stat */
 export function multiplier(game,definitions,stat) {
@@ -26,7 +29,7 @@ export function observingFrontier(game,definitions) {
 }
 /** @param {string} output @returns {import('./types.js').StatId} */
 export function outputStat(output) {
-  return output==='D'?'observing':output==='K'?'analysis':output==='I'?'outreach':output==='F'?'support':output==='training'?'teaching':output==='science'?'science':'research';
+  return output==='C'?'collaboration':output==='E'?'engineering':output==='D'?'observing':output==='K'?'analysis':output==='I'?'outreach':output==='F'?'support':output==='training'?'teaching':output==='science'?'science':'research';
 }
 /** @param {GameState} game @param {Definitions} definitions @param {string} output */
 export function outputMultiplier(game,definitions,output) {
@@ -44,8 +47,13 @@ export function analysisYield(game,definitions,balance) { return balance.knowled
 export function baseProduction(game,definitions,balance) {
   /** @type {import('./types.js').Output} */
   const output={};
-  if (hasPrerequisite(game,'photometry')) output.science=balance.programRate;
-  if (hasPrerequisite(game,'academy')) output.training=balance.course.baseRate;
+  if (hasPrerequisite(game,'photometry')) output.science=(1+getPurchaseCount(game,'appoint-scientist'))*definitions.programs[0].publications/definitions.programs[0].work;
+  for (const mission of definitions.missions) if (hasPrerequisite(game,mission.commissionId)) output.science=(output.science??0)+mission.publications/mission.seconds;
+  for (const program of definitions.jointPrograms) if (hasPrerequisite(game,program.investmentId)) {
+    output.C=(output.C??0)+program.credits/program.seconds;
+    output.science=(output.science??0)+program.publications/program.seconds;
+  }
+  if (hasPrerequisite(game,'academy')) output.training=(1+getPurchaseCount(game,'appoint-teacher'))/balance.course.seconds;
   for (const item of definitions.investments) for (const [key,value] of Object.entries(item.output)) {
     const currency=/** @type {keyof import('./types.js').Output} */(key);
     output[currency]=(output[currency]??0)+value*getPurchaseCount(game,item.id);
@@ -79,4 +87,11 @@ export function previewInvestment(game,definitions,balance,investmentId) {
     activeGain=amount*(outputMultiplier(candidate,definitions,key)-outputMultiplier(game,definitions,key));
   }
   return {passive,actionName:relevantAction?.name??'',activeGain,analysisGain:10*(analysisYield(candidate,definitions,balance)-analysisYield(game,definitions,balance))};
+}
+
+/** @param {GameState} game @param {Definitions} definitions */
+export function facilitySummary(game,definitions) {
+  const facilities=definitions.facilities.map(facility=>({...facility,built:!facility.id || hasPrerequisite(game,facility.id)}));
+  const built=facilities.filter(facility=>facility.built);
+  return {facilities,current:built[built.length-1],telescopes:1+getPurchaseCount(game,'additional-telescope')+getPurchaseCount(game,'reflector')+getPurchaseCount(game,'radio-dish')+built.reduce((sum,facility)=>sum+facility.telescopes,0)};
 }
