@@ -22,12 +22,13 @@
     <button id="start-new">Start station prototype</button>
   </aside>
   <section class="utilities" aria-label="Prototype time controls">
-    <strong id="run-label">Run 1</strong><strong id="clock">00:00</strong><span id="runtime-status">Live</span>
+    <strong id="run-label">Run 1</strong><strong id="clock" title="Time in the current run">Run 00:00</strong><strong id="total-clock" title="Total simulated playtime across all runs">Total 00:00</strong><span id="runtime-status">Live</span>
     <button id="review-prestige" hidden>Review prestige</button>
     <button id="pause">Pause</button>
     <div class="speed-buttons" aria-label="Simulation speed"><button data-speed="1" aria-pressed="true">1×</button><button data-speed="5" aria-pressed="false">5×</button><button data-speed="20" aria-pressed="false">20×</button></div>
     <button id="advance-10">+10 s</button><button id="advance-60">+60 s</button>
   </section>
+  <details id="run-history" class="run-history small" hidden><summary id="run-history-summary">Previous runs</summary><ol id="run-history-list"></ol></details>
   <p id="insight-modifiers" class="small" hidden></p>
   <section id="balances" class="balances" aria-label="Revealed resources"></section>
   <div class="next-step"><span class="eyebrow">Next unlock</span><p id="objective"></p></div>
@@ -37,7 +38,7 @@
     <p class="eyebrow">A new perspective</p><h2 id="prestige-heading">Prestige</h2>
     <div id="prestige-review">
       <p id="prestige-reward" class="prestige-reward"></p>
-      <p id="prestige-requirements"></p><p id="prestige-payout" class="small"></p>
+      <p id="prestige-eligibility-time" class="small" hidden></p><p id="prestige-requirements"></p><p id="prestige-payout" class="small"></p>
       <p><strong>The entire ordinary run resets.</strong> Rebuild every station, target unlock, telescope,
       equipment upgrade, qualification and staff appointment. Discoveries, Publications and grants reset too.</p>
       <p id="prestige-losses"></p><p id="prestige-work-loss" class="small"></p>
@@ -48,6 +49,7 @@
     <div id="insight-shop" hidden>
       <p id="insight-wallet" class="prestige-reward"></p><p id="insight-shop-info"></p>
       <div id="insight-upgrades" class="insight-grid"></div>
+      <details id="completed-insight-upgrades" class="completed-modifiers" hidden><summary></summary><div id="completed-insight-list" class="insight-grid"></div></details>
       <button id="start-next-run" class="start-next-run">Begin next run</button>
       <p class="small">Purchases are permanent. Unspent Insight stays available at your next prestige. Insight upgrades can only be bought between runs.</p>
     </div>

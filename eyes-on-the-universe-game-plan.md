@@ -2,6 +2,70 @@
 
 Game design plan — draft 1.4 — 2026-10-17
 
+## Scientific investment and compact purchases — 2026-10-17
+
+Measured playtest: first reset at 19:42 with 29 Insight (radio + one extra dish),
+second run 13:44 with 62 Insight (joint science, waiting for infrared), final run
+11:14; total completion 44:40 after two prestiges. Orbital construction had dull
+Funding/Engineering waits, advanced grants lost to repetitive fundraising, and
+Data/Knowledge/Interest accumulated without useful investment choices. Preserve
+rough overall pacing as a playtest reference; improve choices before raising prices.
+
+Keep observing grants as the existing early bootstrap. Research and flagship grants
+instead spend Data, Knowledge and Interest upfront for permanent Funding; stock
+prices grow 55% / 60%, with 8 / 24 base Funding per second. Mission partnerships
+open orbital grants (60 base Funding/s, 65% price growth) at the space-program
+stage and infrared grants (160 base Funding/s, 65% growth) through joint science
+at 800 Publications, before the 1,000-Publication infrared program. All share the
+Publication-backed slot quota. No recurring consumption or grant restart actions.
+
+Research impact, orbital partnerships and infrared partnerships improve grant
+output specifically (+50%, +50%, +100% of base), leaving fundraiser output intact.
+Their prices consume scientific output, public Interest and Expertise. Funding
+therefore has several useful investments beyond adding staff; preserve staffing
+as a baseline rather than adding compulsory appointment costs.
+
+Space-program establishment opens repeatable mission tooling in Engineering
+(Data/Knowledge/Expertise → Engineering capacity) and orbital partnerships in
+Support. Orbital platform opens precision fabrication (Data/Knowledge/Expertise →
+Engineering bonus); payload opens an instrument testbed. Infrared establishment
+opens cryogenic fabrication before mirror/shield construction. These are optional
+permanent investments, not additional mandatory gates. Earlier producers continue.
+
+Guidance names the new funding/fabrication routes during construction. Show grant
+income separately within total Funding. New options use the existing gold markers.
+Completed single purchases and fully upgraded/maxed purchases automatically move
+to a closed “Installed / fully upgraded (N)” section per station. Keep them readable
+on demand, preserve ownership/benefits, and keep partially upgraded purchases visible.
+Fully maxed Insight modifiers also collapse in the shop. Reset/import starts with
+completed sections closed. No dropdowns, allocation controls, compulsory timers or new resources.
+
+Record per-run prestige eligibility time and eventual reset time/Insight in compact
+run history; preserve campaign time. Do not fabricate eligibility times or history
+for existing saves. Migrate all existing purchases, resources, Insight and known
+time unchanged. New prices/outputs apply forward. Reuse the one progression test
+for meaningful grant/fabrication and timing checks; browser-check completed groups.
+
+## Campaign timing — 2026-10-17
+
+Hosted Pages deployment was confirmed working. The player completed the revised
+curve after two prestiges in an estimated 30–40 minutes; total duration was not
+measured, so treat this as qualitative feedback rather than a precise balance result.
+
+Display current-run and total simulated playtime together. Total time persists
+through prestige, the Insight shop, saves and reloads; a full restart resets both.
+Only advancing simulation ticks adds time: pause, hidden tabs, offline time and
+shop browsing add none. Speed/advance controls affect both clocks consistently.
+Support hour formatting. The ending records run and campaign time through completion,
+remaining stable when observation continues. Timing is bookkeeping, not retained
+economic progress or a prestige modifier.
+
+Save schema 15 adds total ticks and a partial-history marker to the clock. Old
+saves retain all progress and initialize the total from the known current run;
+prior prestige durations cannot be reconstructed. Label these “Total tracked” if
+previous runs are missing. Fresh games record complete totals. Keep testing minimal:
+reuse the progression test for accumulation, reset retention, shop pause and reload.
+
 ## Prestige pacing revision — 2026-10-17
 
 Target the first attractive prestige around **10 minutes at normal 1× speed**, with

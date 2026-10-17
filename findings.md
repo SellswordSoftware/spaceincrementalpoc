@@ -587,3 +587,45 @@ without a timed lock or automatic reset. Existing state migrates unchanged and
 previously awarded Insight is retained without retroactive bonuses. One timing
 check was added to the existing progression test. Human play remains necessary
 to calibrate aggressive reinvestment, later reset cadence and total duration.
+
+
+## Hosted playtest and campaign clock — 2026-10-17
+
+GitHub Pages deployment succeeded. The player finished the new curve after two
+prestiges in approximately 30–40 minutes, but lost track of total time. Added a
+simulation-based campaign clock beside the run clock and included both in the
+ending. It persists across resets/save/reload and excludes pauses, offline time
+and the Insight shop. A full restart clears it. Continued observing does not
+change the ending's completion duration.
+
+Older saves only know the current run's duration. Preserve that known time and
+mark missing earlier-run history as “Total tracked”; do not fabricate an estimate.
+Schema 15 migrates the existing saves without changing economic state. Reuse the
+single progression test for the few necessary clock persistence checks.
+
+
+## Scientific investment and compact purchases — 2026-10-17
+
+Measured completion: 44:40 across runs of 19:42 / 13:44 / 11:14, with 29 / 62
+Insight at the first two resets. The orbital and pre-infrared stretches had dull
+Funding/Engineering waits. Constant-output grants with 80% cost growth lost to
+one-graduate fundraisers. Large Data, Knowledge and Interest balances could not
+help those bottlenecks. The chosen first reset time did not measure first eligibility.
+
+Advanced grants now buy permanent Funding with Data/Knowledge/Interest, rising
+through research, major research, orbital and infrared tiers. Research impact and
+mission partnerships improve grants specifically, preserving staffing as a baseline.
+Mission tooling, precision fabrication, the payload testbed and cryogenic fabrication
+spend Data/Knowledge/Expertise to improve construction. Unlock these remedies before
+the construction they support; no ongoing drain, restart timers or mandatory reset.
+
+Completed/maxed purchases move into collapsed, inspectable per-station sections;
+partial upgrades remain in the active list. Preserve keyboard focus and existing
+ownership/production. Prestige eligibility and actual reset times are recorded
+separately in run history. Old eligibility/history is unknown, not reconstructed.
+
+Save schema 16 / network-investment migrates existing resources, purchases, Insight
+and known campaign time, applying revised costs/production forward. The existing
+progression test covers grant inputs, targeted Funding bonuses, fabrication gains
+and reset history. Later human playtests must judge the investment choices; the
+44:40 measurement is a reference, not a promised new completion time.

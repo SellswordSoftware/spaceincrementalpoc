@@ -1,4 +1,4 @@
-import { multiplier } from './rates.js';
+import { multiplier, hasPrerequisite } from './rates.js';
 import { definitions as defaultDefinitions } from '../definitions/content.js';
 import { balance as defaultBalance } from '../definitions/balance.js';
 import { canonicalStringify, getBalanceHash } from './serialization.js';
@@ -6,11 +6,11 @@ import { validateDefinitions, validateBalance, ValidationError } from './validat
 import { validateGame } from './validate-state.js';
 import { SAVE_SCHEMA_VERSION, SIMULATION_VERSION } from './versions.js';
 
-/** Everything except Insight is rebuilt from the starter state.
+/** Ordinary progress is rebuilt; the caller retains Insight and campaign time.
  * @param {import('./types.js').Balance} balance @param {number} [campaignIndex]
  * @param {import('./types.js').InsightState} [insight] @returns {import('./types.js').State} */
 export function createRunState(balance,campaignIndex=1,insight={points:0,totalEarned:0,upgrades:{},phase:'playing',lastAward:0}) {
-  return {clock:{tick:0,campaignIndex},insight,resources:{...balance.startingStocks},purchases:{},population:{total:0},
+  return {clock:{tick:0,totalTicks:0,totalIsPartial:false,campaignIndex,prestigeEligibleAtTick:null,eligibilityKnown:true,completedRuns:[]},insight,resources:{...balance.startingStocks},purchases:{},population:{total:0},
     academy:{timers:[],remainder:0},science:{publications:0},reviewedOptions:[],joint:{completedAtTick:null},journal:['moon'],nextActionTick:0,modified:false};
 }
 
@@ -35,6 +35,7 @@ export function serializeGame(game,definitions=defaultDefinitions,balance=defaul
 export function deserializeGame(json,definitions=defaultDefinitions,balance=defaultBalance) {
   let candidate;
   try { candidate=JSON.parse(json); } catch { throw new ValidationError('save','invalid JSON'); }
+  let migrateClock=false;
   // Migrate only exact bundled prior configurations; retain their economic progress.
   const previousSingleData=candidate?.schemaVersion===6 && candidate.contentVersion==='0.7.0-single-data'
     && candidate.simulationVersion==='0.7.0-single-data' && candidate.balanceId==='single-data-v1' && candidate.balanceHash==='fnv1a32-4f42765e';
@@ -53,6 +54,7 @@ export function deserializeGame(json,definitions=defaultDefinitions,balance=defa
   const previousProgression=candidate?.schemaVersion===13 && candidate.contentVersion==='0.14.0-progression'
     && candidate.simulationVersion==='0.14.0-progression' && candidate.balanceId==='progression-v1' && candidate.balanceHash==='fnv1a32-7b4ab164';
   if ((previousSingleData || previousPrograms || previousInsight || previousParallel || previousEngineering || previousHorizons || previousSynthesis || previousProgression) && definitions===defaultDefinitions && balance===defaultBalance) {
+    migrateClock=true;
     candidate.schemaVersion=SAVE_SCHEMA_VERSION;
     candidate.contentVersion=definitions.contentVersion;
     candidate.balanceId=balance.id;
@@ -94,10 +96,41 @@ export function deserializeGame(json,definitions=defaultDefinitions,balance=defa
   const previousProduction=candidate?.schemaVersion===14 && candidate.contentVersion==='0.15.0-production'
     && candidate.simulationVersion==='0.15.0-production' && candidate.balanceId==='production-v1' && candidate.balanceHash==='fnv1a32-66e896fc';
   if (previousProduction && definitions===defaultDefinitions && balance===defaultBalance) {
+    migrateClock=true;
+    candidate.schemaVersion=SAVE_SCHEMA_VERSION;
     candidate.contentVersion=definitions.contentVersion;
     candidate.balanceId=balance.id;
     candidate.balanceHash=getBalanceHash(balance,definitions);
     candidate.simulationVersion=SIMULATION_VERSION;
+  }
+  const previousPacing=candidate?.schemaVersion===14 && candidate.contentVersion==='0.16.0-pacing'
+    && candidate.simulationVersion==='0.16.0-pacing' && candidate.balanceId==='pacing-v1' && candidate.balanceHash==='fnv1a32-4eb033a4';
+  if (previousPacing && definitions===defaultDefinitions && balance===defaultBalance) {
+    migrateClock=true;
+    candidate.schemaVersion=SAVE_SCHEMA_VERSION;
+    candidate.contentVersion=definitions.contentVersion;
+    candidate.balanceId=balance.id;
+    candidate.balanceHash=getBalanceHash(balance,definitions);
+    candidate.simulationVersion=SIMULATION_VERSION;
+  }
+  const previousCampaign=candidate?.schemaVersion===15 && candidate.contentVersion==='0.16.0-pacing'
+    && candidate.simulationVersion==='0.17.0-campaign-clock' && candidate.balanceId==='pacing-v1' && candidate.balanceHash==='fnv1a32-4eb033a4';
+  if (previousCampaign && definitions===defaultDefinitions && balance===defaultBalance) {
+    candidate.schemaVersion=SAVE_SCHEMA_VERSION;
+    candidate.contentVersion=definitions.contentVersion;
+    candidate.balanceId=balance.id;
+    candidate.balanceHash=getBalanceHash(balance,definitions);
+    candidate.simulationVersion=SIMULATION_VERSION;
+  }
+  if (migrateClock) {
+    // Earlier prestiges erased their run durations; preserve the known current run.
+    candidate.state.clock.totalTicks=candidate.state.clock.tick;
+    candidate.state.clock.totalIsPartial=candidate.state.clock.campaignIndex>1;
+  }
+  if (migrateClock || (previousCampaign && definitions===defaultDefinitions && balance===defaultBalance)) {
+    candidate.state.clock.prestigeEligibleAtTick=null;
+    candidate.state.clock.eligibilityKnown=!balance.prestige.requires.every(id=>hasPrerequisite(candidate,id));
+    candidate.state.clock.completedRuns=[];
   }
   if (candidate?.schemaVersion !== SAVE_SCHEMA_VERSION) {
     throw new ValidationError('save','This save uses a different economy. Keep the export and start a new station prototype.');

@@ -7,6 +7,13 @@ import { TICK_SECONDS } from './versions.js';
 export function insightPrice(game,upgrade) {
   return Math.ceil(upgrade.cost*upgrade.growth**(game.state.insight.upgrades[upgrade.id]??0));
 }
+/** Record eligibility at the purchase boundary, independently of the later reset choice.
+ * @param {import('./types.js').GameState} game @param {import('./types.js').Balance} balance */
+export function trackPrestigeEligibility(game,balance) {
+  const clock=game.state.clock;
+  if (clock.eligibilityKnown && clock.prestigeEligibleAtTick===null && game.state.insight.phase==='playing'
+    && balance.prestige.requires.every(id=>hasPrerequisite(game,id))) clock.prestigeEligibleAtTick=clock.tick;
+}
 /** A live, read-only preview. No rewards are claimed until beginPrestige succeeds.
  * @param {import('./types.js').GameState} game @param {import('./types.js').Definitions} definitions @param {import('./types.js').Balance} balance */
 export function previewPrestige(game,definitions,balance) {
@@ -42,7 +49,13 @@ export function concludeRun(game,definitions,balance) {
   const insight={...game.state.insight,points:game.state.insight.points+preview.award,totalEarned:game.state.insight.totalEarned+preview.award,
     upgrades:{...game.state.insight.upgrades},phase:/** @type {const} */('shop'),lastAward:preview.award};
   const modified=game.state.modified;
+  trackPrestigeEligibility(game,balance);
+  const {totalTicks,totalIsPartial,prestigeEligibleAtTick,completedRuns}=game.state.clock;
+  const history=[...completedRuns,{run:game.state.clock.campaignIndex,eligibleAtTick:prestigeEligibleAtTick,endedAtTick:game.state.clock.tick,insight:preview.award}];
   game.state=createRunState(balance,game.state.clock.campaignIndex+1,insight);
+  game.state.clock.totalTicks=totalTicks;
+  game.state.clock.totalIsPartial=totalIsPartial;
+  game.state.clock.completedRuns=history;
   game.state.modified=modified;
   return preview.award;
 }

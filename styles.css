@@ -151,3 +151,15 @@ input[type=file] { max-width:15rem; font-size:.7rem; }
 .new-option { display:inline-block; color:#80500a; background:#fff0c9; font-size:.65rem; border:1px solid #d8b469; border-radius:3px; padding:.1rem .35rem; }
 
 .prestige-suggested { color:#80500a; border-color:#c88d2b; background:#fff0c9; font-weight:bold; }
+
+.completed-purchases { margin-top:.8rem; border-top:1px solid var(--line); color:var(--muted); }
+.completed-purchases > summary, .run-history > summary { cursor:pointer; padding:.65rem 0; font: .75rem/1.5 'Trebuchet MS',sans-serif; }
+.completed-purchases[open] > summary { color:var(--accent); }
+.completed-purchases .purchase.complete p { display:block; }
+.completed-purchases .purchase-gain { display:none !important; }
+.run-history { margin:.5rem 0; }
+.run-history ol { font:.75rem/1.5 'Trebuchet MS',sans-serif; }
+
+.completed-modifiers { margin:.8rem 0; color:var(--muted); }
+.completed-modifiers > summary { cursor:pointer; padding:.6rem 0; font: .8rem/1.5 'Trebuchet MS',sans-serif; }
+.completed-modifiers button { display:none; }

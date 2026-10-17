@@ -1,5 +1,5 @@
 import { grantCount, newOptions } from './availability.js';
-import { productionRates, baseProduction, hasPrerequisite, observingFrontier, multiplier, facilitySummary } from './rates.js';
+import { productionRates, baseProduction, hasPrerequisite, observingFrontier, multiplier, facilitySummary, grantMultiplier } from './rates.js';
 import { populationSummary } from './people.js';
 import { previewPrestige } from './prestige.js';
 import { TICK_SECONDS } from './versions.js';
@@ -8,7 +8,7 @@ import { TICK_SECONDS } from './versions.js';
  * @param {import('./types.js').GameState} game @param {import('./types.js').Definitions} definitions @param {import('./types.js').Balance} balance */
 export function getGuidance(game,definitions,balance) {
   if (game.state.insight.phase==='shop') return {nextId:null,objective:`Spend Insight, then begin run ${game.state.clock.campaignIndex}.`,suggestion:'Permanent modifiers carry into every future run. Unspent points can be saved for your next prestige.'};
-  const path=['observing-routine','analysis-tools','outreach','support-office','target-jupiter','stable-mount','tracking','engineering','target-saturn','reflector','permanent-enclosure','camera','target-star-clusters','academy','first-graduate','research','robotic-dome','photometry','first-publication','grant-office','observing-grant','target-nebulae','advanced-calibration','spectrograph','stellar-spectroscopy','advanced-grants','research-grant','expanded-observatory','target-galaxies','mountain-telescope','target-galaxy-clusters','radio-observatory','radio-timing','target-radio-sources','space-program','orbital-operations','orbital-platform','orbital-payload','orbital-commissioning','orbital-monitoring','target-transit-targets','flagship-grants','flagship-grant','infrared-program','infrared-calibration','infrared-mirror','infrared-shield','infrared-commissioning','target-infrared-fields','joint-science','joint-changing-sky','joint-planetary-systems','target-deep-field','joint-deep-time','network-integration','network-synthesis'];
+  const path=['observing-routine','analysis-tools','outreach','support-office','target-jupiter','stable-mount','tracking','engineering','target-saturn','reflector','permanent-enclosure','camera','target-star-clusters','academy','first-graduate','research','robotic-dome','photometry','first-publication','grant-office','observing-grant','target-nebulae','advanced-calibration','spectrograph','stellar-spectroscopy','advanced-grants','research-grant','expanded-observatory','target-galaxies','mountain-telescope','target-galaxy-clusters','radio-observatory','radio-timing','target-radio-sources','space-program','orbital-operations','orbital-platform','orbital-payload','orbital-commissioning','orbital-monitoring','target-transit-targets','flagship-grants','flagship-grant','joint-science','joint-changing-sky','joint-planetary-systems','infrared-program','infrared-calibration','infrared-mirror','infrared-shield','infrared-commissioning','target-infrared-fields','target-deep-field','joint-deep-time','network-integration','network-synthesis'];
   const nextId=previewPrestige(game,definitions,balance).encouraged?'expanded-observatory':path.find(id=>!hasPrerequisite(game,id));
   const next=definitions.investments.find(item=>item.id===nextId);
   const objective=game.state.joint.completedAtTick!==null?'Eyes on the Universe complete. Keep observing, or prestige to rebuild with Insight.'
@@ -24,6 +24,8 @@ export function getGuidance(game,definitions,balance) {
   if (people.available>0 && !next?.cost.E) suggestion=`${people.available} unassigned graduate${people.available===1?'':'s'} can join any eligible station. No particular appointment is required to progress.`;
   if (next?.cost.X) suggestion='Add mentoring or appoint researchers to increase Expertise production for this required method.';
   if ((next?.publications??0)>game.state.science.publications) suggestion=`Requires ${next?.publications} cumulative Publications; your record is never spent. Add research teams, improve scientific practice or coordinate science to increase production.`;
+  if (next?.cost.F && hasPrerequisite(game,'advanced-grants')) suggestion='Invest Data, Knowledge and Interest in scientific grants in Support. Research impact and mission partnerships improve grant income; staff remain another option.';
+  if (next?.cost.E && hasPrerequisite(game,'space-program')) suggestion='Grow Engineering with Data/Expertise-funded mission tooling and fabrication. In Support, scientific grants and partnerships turn your observing output into construction Funding.';
   return {nextId:nextId??null,objective,suggestion};
 }
 /** @param {import('./types.js').GameState} game @param {import('./types.js').Definitions} definitions @param {import('./types.js').Balance} balance */
@@ -39,8 +41,9 @@ export function getSummary(game,definitions,balance) {
     }),finale:definitions.finale},branches,missions:definitions.missions.map(mission=>({...mission,commissioned:hasPrerequisite(game,mission.commissionId),rate:hasPrerequisite(game,mission.commissionId)?mission.publicationsPerSecond*multiplier(game,definitions,'science'):0})),prestige:previewPrestige(game,definitions,balance),
     science:{...game.state.science,teams:hasPrerequisite(game,'photometry')?1+(game.state.purchases['appoint-scientist']??0):0,rate:rates.science??0},
     academy:{...game.state.academy,seconds:balance.course.seconds,reward:multiplier(game,definitions,'teaching')},
-    grants:{active:grantCount(game,definitions),capacity:Math.floor(game.state.science.publications+1e-9)},
-    seconds:game.state.clock.tick*TICK_SECONDS,rates,population:populationSummary(game,definitions),frontier:observingFrontier(game,definitions),
+    grants:{active:grantCount(game,definitions),capacity:Math.floor(game.state.science.publications+1e-9),
+      rate:definitions.investments.filter(item=>item.grant).reduce((sum,item)=>sum+(item.output.F??0)*(game.state.purchases[item.id]??0),0)*grantMultiplier(game,definitions)*multiplier(game,definitions,'support'),bonus:grantMultiplier(game,definitions)},
+    seconds:game.state.clock.tick*TICK_SECONDS,totalSeconds:game.state.clock.totalTicks*TICK_SECONDS,rates,population:populationSummary(game,definitions),frontier:observingFrontier(game,definitions),
     observing:{...facilitySummary(game,definitions),capacity:baseProduction(game,definitions,balance).D??0,bonus:multiplier(game,definitions,'observing')},
     guidance:getGuidance(game,definitions,balance),
     stations:definitions.stations.map(station=>({...station,visible:station.reveal.every(id=>hasPrerequisite(game,id)),open:station.requires.every(id=>hasPrerequisite(game,id))}))};

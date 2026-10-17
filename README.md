@@ -82,8 +82,8 @@ instrument can directly observe every target.
 6. Spend Expertise on **advanced calibration** (5 Publications), **orbital operations**
    (30), **infrared calibration** (1,000) and **network integration** (1,000). These enable
    the spectrograph/mountain telescope, optical payload, flagship mirror and ending.
-7. Publications open grants, then qualify research grants at **15** and flagship
-   grants at **100**. Grants add **2 / 4 / 8 base Funding/s**, respectively. All tiers
+7. Publications open grants, then qualify research grants at **15** and major research
+   grants at **100**. These add **2 / 8 / 24 base Funding/s**, respectively. All tiers
    share `floor(Publications)` slots. Buying grants never spends Publications.
 8. Build radio instruments and the optical orbital telescope, then a distinct cooled
    infrared flagship. Each commissioned mission immediately adds continuous Data
@@ -104,6 +104,58 @@ produce fractional rewards continuously. Synthesis has no countdown. Waiting com
 from accumulating resources, and investments increase production. Producers have no
 recurring wallet costs, wages, allocation percentages or restart clicks.
 
+## Scientific investment and construction
+
+Funding has several growth paths. Supporters and permanent fundraisers provide
+baseline income; advanced grants spend scientific output and public backing once
+for permanent Funding. They never drain inputs automatically.
+
+| Grant | Initial Data / Knowledge / Interest | Base Funding/s | Repeat price growth |
+|---|---|---:|---:|
+| Research | 10,000 / 500 / 40 | 8 | 55% |
+| Major research | 250,000 / 12,500 / 250 | 24 | 60% |
+| Orbital | 2,000,000 / 100,000 / 1,500 | 60 | 65% |
+| Infrared survey | 15,000,000 / 750,000 / 6,000 | 160 | 65% |
+
+Research impact and orbital/infrared partnerships add **50% / 50% / 100% of base
+grant income**. They do not multiply fundraiser appointments. All grant tiers
+share the cumulative Publication-backed slots. Support shows actual grant income
+within total Funding, and previews show the next purchase's output after bonuses.
+
+The space program opens orbital partnerships in Support and repeatable mission
+tooling in Engineering. Tooling spends Data/Knowledge/Expertise for **1.5 base E/s**.
+The platform opens precision fabrication (**+50% base E per level**, four levels),
+and the payload opens a testbed (**+4 base E/s**). Joint science opens infrared
+partnerships at **800 Publications**, before the flagship program at 1,000. The
+flagship program opens cryogenic fabrication (**+75% base E per level**, four levels)
+before its mirror/shield purchases. These optional investments use productive
+stations to address construction bottlenecks; there are no new compulsory gates.
+
+Fully installed and fully upgraded purchases automatically leave the active list.
+Each station has a closed **Installed / fully upgraded (N)** section to inspect
+them again. Partially upgraded and repeatable purchases stay visible until maxed.
+Ownership, production and the observatory diagram are unaffected. Fully maxed
+Insight modifiers likewise move to a collapsed section in the shop.
+
+The prestige review reports when prestige first became available in the current
+run. A compact **Previous runs** section records eligibility time, actual reset
+time and Insight earned. Older saves preserve all existing progress/time but have
+no invented eligibility/history records. Previously eligible imported runs report
+that their eligibility time is unavailable. This supports measuring an early
+prestige opportunity separately from choosing to continue longer.
+
+## Playtime counters
+
+The header shows **Run** time and **Total** simulated playtime across prestiges.
+Both survive save/reload; prestige resets only Run time. Pause, offline time and
+Insight-shop browsing add no time. Speed controls and +time skips advance both.
+A full restart resets the total. Long durations include hours. The ending shows
+the final run time and total through completion, unchanged by continued observing.
+
+Older saves preserve their current run time but cannot recover erased previous
+runs. If earlier prestiges are missing, the counter reads **Total tracked** and
+starts with the known current run. Fresh games have a complete total.
+
 ## First prestige pacing
 
 The first reset decision is intended around **10 minutes at normal 1×**: complete
@@ -115,7 +167,8 @@ investing in this run remains available.
 
 Prestige pays **5 base Insight** plus the Publication bonus. **Engineering heritage**
 starts at 2 Insight and doubles Engineering and Collaboration production per level.
-Research and flagship grants yield **4 / 8 Funding/s** with 80% stock price growth.
+Advanced grant Funding is now purchased with Data, Knowledge and Interest, with
+partnership upgrades that improve grants specifically.
 The opening, later prices and scientific record requirements now support repeated
 rebuilding rather than a quick first-run finish.
 
@@ -152,7 +205,7 @@ teaching and ×1.25 other production. Classroom timers stay fixed.
 
 Autosave runs locally; reload/import resumes paused. Export JSON for a portable
 copy. No offline progress. Import validates before replacing the current game.
-Bundled prior saves (schemas 6–14) migrate their purchases and wallets. Old science
+Bundled prior saves (schemas 6–16) migrate their purchases and wallets. Old science
 phases and fractional reward banks convert into accrued Publications/Credits.
 Existing joint teams retain dedicated staff without taking previously unassigned
 graduates. Already-paid synthesis completes on migration. Earlier construction
