@@ -1,7 +1,7 @@
 import { buildJointScience } from './joint-science.js';
 import { buildObservatory, renderObservatory } from './observatory.js';
 import { advanceTicks, balance, createGame, definitions, deserializeGame, dispatch, getSummary, quoteCommand, TICK_SECONDS } from '../core/index.js';
-import { getPurchaseCount, hasPrerequisite, scaledOutput, analysisYield, previewInvestment, insightMultiplier } from '../core/rates.js';
+import { getPurchaseCount, hasPrerequisite, scaledOutput, analysisYield, previewInvestment, insightMultiplier, multiplier } from '../core/rates.js';
 import { currencyName } from '../core/commands.js';
 import { backupPreviousSave, downloadSave, exportGame, loadGame, saveGame, storedSave } from './storage.js';
 
@@ -53,7 +53,8 @@ try {
 /** @param {import('../core/types.js').GameEvent[]} events */
 function record(events) {
   recentEvents=[...events,...recentEvents].slice(0,20);
-  if (events.some(event => event.type==='graduate' || event.type==='record' || event.type==='publication')) message(events.find(event => event.type==='graduate' || event.type==='record' || event.type==='publication')?.detail ?? 'Milestone completed.');
+  if (events.some(event=>event.type==='unlock')) message(events.filter(event=>event.type==='unlock').map(event=>event.detail).join(' '));
+  else if (events.some(event => event.type==='graduate' || event.type==='record' || event.type==='publication')) message(events.find(event => event.type==='graduate' || event.type==='record' || event.type==='publication')?.detail ?? 'Milestone completed.');
   const completion=events.find(event=>event.type==='completion');
   if (completion) {
     stopHold(); running=false; accumulator=0; message(completion.detail); persist(); render();
@@ -81,7 +82,7 @@ function send(command,quiet=false) {
     if (command.type==='beginPrestige') message(`Earned ${game.state.insight.lastAward} Insight. Choose permanent modifiers before rebuilding.`);
     else if (command.type==='buyInsightUpgrade') message('Permanent Insight modifier purchased.');
     else if (command.type==='startNextRun') message(`Run ${game.state.clock.campaignIndex} begins. Rebuild with your permanent Insight modifiers.`);
-    else if (command.type==='buyInvestment') message(`${definitions.investments.find(item => item.id===command.investmentId)?.name}: added to the network.`);
+    else if (command.type==='buyInvestment' && !result.events.some(event=>event.type==='completion' || event.type==='unlock')) message(`${definitions.investments.find(item => item.id===command.investmentId)?.name}: added to the network.`);
     else if (command.type==='processData') message(`Processed ${fmt(command.quantity)} Data → ${fmt(command.quantity*analysisYield(game,definitions,balance))} Knowledge. Observations continue.`);
   }
   if (!quiet) { persist(); render(); }
@@ -120,6 +121,15 @@ for (const station of definitions.stations) {
   q(section,'h2').textContent=station.name;
   q(section,'.station-icon').textContent=({observatory:'✧',analysis:'◈',outreach:'☀',support:'❧',academy:'⌂',research:'✦',science:'⌁',engineering:'⚒',radio:'◉',space:'⊙',joint:'✣'})[station.id];
   q(section,'.station-info').textContent=station.use;
+  const review=document.createElement('button'); review.className='review-new'; review.hidden=true;
+  review.addEventListener('click',()=>{
+    const item=getSummary(game,definitions,balance).newOptions.find(item=>item.station===station.id);
+    if (!item) return;
+    const row=q(section,`[data-investment="${item.id}"]`);
+    reviewOption(item.id);
+    row.focus({preventScroll:true}); row.scrollIntoView({block:'center',behavior:'smooth'});
+  });
+  q(section,'.station-header').append(review);
   const actions=q(section,'.station-actions');
   for (const action of definitions.actions.filter(item => item.station===station.id)) {
     const button=document.createElement('button');
@@ -178,18 +188,21 @@ for (const station of definitions.stations) {
       const name=document.createElement('h3'); name.textContent=mission.name;
       const description=document.createElement('p'); description.className='small'; description.textContent=mission.description;
       const assembly=document.createElement('p'); assembly.className='small'; assembly.dataset.assembly=mission.id;
-      const progress=document.createElement('progress'); progress.max=mission.seconds; progress.dataset.missionProgress=mission.id; progress.setAttribute('aria-label',`${mission.name} cycle progress`);
       const status=document.createElement('p'); status.className='course-info'; status.dataset.missionStatus=mission.id;
-      card.append(name,description,assembly,progress,status); extra.append(card);
+      card.append(name,description,assembly,status); extra.append(card);
     }
   }
-  if (station.id==='academy' || station.id==='science') {
+  if (station.id==='academy') {
     const extra=q(section,'.station-extra');
     const info=document.createElement('p'); info.className='course-info'; info.id=`${station.id}-cycle-info`;
     const timers=document.createElement('div'); timers.className='producer-timers'; timers.id=`${station.id}-timers`;
     const note=document.createElement('p'); note.className='small';
     note.textContent='Each team runs independently and repeats automatically. Pay once to add capacity. No recurring costs; practice and Insight increase rewards, keeping the timer unchanged. Fractional rewards carry into future completions.';
     extra.append(info,timers,note);
+  }
+  if (station.id==='science') {
+    const note=document.createElement('p'); note.id='science-production'; note.className='small';
+    q(section,'.station-extra').append(note);
   }
   const purchases=q(section,'.station-purchases');
   const label=document.createElement('p'); label.className='section-label'; label.textContent='Invest in this station'; purchases?.append(label);
@@ -201,13 +214,23 @@ for (const station of definitions.stations) {
     const effect=document.createElement('p'); effect.textContent=item.effect;
     const gain=document.createElement('p'); gain.className='purchase-gain';
     const button=document.createElement('button'); button.dataset.buy=item.id;
-    const verb=document.createElement('span'); verb.textContent=item.id===definitions.finale.investmentId?'Begin synthesis':item.kind==='appointment'?'Appoint permanently':item.kind==='producer'?'Add producer':item.kind==='unlock'?'Unlock':item.kind==='discovery'?'Research':'Improve';
+    const verb=document.createElement('span'); verb.textContent=item.id===definitions.finale.investmentId?'Complete synthesis':item.kind==='appointment'?'Appoint permanently':item.kind==='producer'?'Add producer':item.kind==='unlock'?'Unlock':item.kind==='discovery'?'Research':'Improve';
     const cost=document.createElement('small'); button.append(verb,cost);
     button.addEventListener('click',() => send({type:'buyInvestment',investmentId:item.id}));
     const reason=document.createElement('span'); reason.className='blocked';
+    const marker=document.createElement('span'); marker.className='new-option'; marker.textContent='New'; marker.hidden=true; head.prepend(marker);
+    row.addEventListener('focusin',()=>reviewOption(item.id));
+    row.addEventListener('click',()=>reviewOption(item.id));
     row.append(head,effect,gain,button,reason); purchases?.append(row);
   }
   el('stations').append(section);
+}
+
+/** Inspecting an option never requires spending resources.
+ * @param {string} investmentId */
+function reviewOption(investmentId) {
+  if (!getSummary(game,definitions,balance).newOptions.some(item=>item.id===investmentId)) return;
+  send({type:'reviewOption',investmentId},true); persist(); render();
 }
 
 // Stable shop buttons preserve focus while prices and modifiers update.
@@ -221,7 +244,7 @@ for (const upgrade of definitions.insightUpgrades) {
   card.append(title,description,current,button); el('insight-upgrades').append(card);
 }
 /** @type {Record<import('../core/types.js').StatId,string>} */
-const statNames={observing:'Data',analysis:'Knowledge',outreach:'Interest',support:'Funding',teaching:'Graduates per cycle',research:'Expertise',science:'Publications per cycle',engineering:'Engineering',collaboration:'Collaboration Credits per cycle'};
+const statNames={observing:'Data',analysis:'Knowledge',outreach:'Interest',support:'Funding',teaching:'Graduates per cycle',research:'Expertise',science:'Publications/s',engineering:'Engineering',collaboration:'Collaboration Credits/s'};
 function renderPrestige() {
   const preview=getSummary(game,definitions,balance).prestige;
   const shop=game.state.insight.phase==='shop';
@@ -229,7 +252,8 @@ function renderPrestige() {
   el('run-label').textContent=`Run ${game.state.clock.campaignIndex}`;
   el('review-prestige').hidden=shop || !(hasPrerequisite(game,'research') || insight.totalEarned>0);
   /** @type {HTMLButtonElement} */(el('review-prestige')).disabled=awaitingNewRun || reviewingPrestige;
-  el('review-prestige').textContent=preview.eligible?`Prestige · +${preview.award} Insight`:'Review prestige';
+  el('review-prestige').textContent=preview.eligible?`${preview.encouraged?'Prestige suggested':'Prestige'} · +${preview.award} Insight`:'Review prestige';
+  el('review-prestige').classList.toggle('prestige-suggested',preview.encouraged);
   el('prestige-panel').hidden=!shop && !reviewingPrestige;
   el('prestige-review').hidden=shop;
   el('insight-shop').hidden=!shop;
@@ -240,14 +264,11 @@ function renderPrestige() {
   el('insight-modifiers').hidden=insight.totalEarned===0;
   el('insight-modifiers').textContent=`${insight.points} unspent Insight · permanent modifiers: ${Object.entries(statNames).map(([stat,name])=>`${name} ×${fmt(insightMultiplier(game,definitions,/** @type {import('../core/types.js').StatId} */(stat)))}`).join(' · ')}`;
   el('prestige-reward').textContent=preview.eligible?`Earn ${preview.award} Insight`:`Prestige reward: ${balance.prestige.baseAward} or more Insight`;
-  el('prestige-requirements').textContent=preview.eligible?'Requirements met: nebula frontier researched and at least one grant secured.':preview.blockedReasons.join(' · ');
+  el('prestige-requirements').textContent=preview.eligible?'Requirements met: nebula frontier, robotic dome and at least one observing grant.':preview.blockedReasons.join(' · ');
   el('prestige-payout').textContent=`${balance.prestige.baseAward} base Insight, with diminishing rewards for additional Publications: 2 Publications → ${balance.prestige.baseAward+1}, 5 → ${balance.prestige.baseAward+2}, 10 → ${balance.prestige.baseAward+3}. Your next reward increase is at ${preview.nextPublicationThreshold} Publications.`;
   const loss=preview.losses;
   el('prestige-losses').textContent=`You will lose: ${price(Object.fromEntries(Object.entries(loss.resources).filter(([key,value])=>value>0 || ['D','F','K','I','X'].includes(key))))}; ${loss.purchases} purchased levels, including ${loss.producers} producer purchases; ${loss.stations} station unlocks; ${loss.telescopes} telescopes; ${loss.people} trained people; ${loss.discoveries} journal discoveries; ${loss.publications} Publications and ${loss.grants} grants. Current run time: ${fmt(preview.seconds/60)} minutes.`;
-  el('prestige-work-loss').textContent=`${loss.classrooms} classroom(s) and ${loss.researchTeams} research team(s), all timer progress (including space missions), and fractional rewards (${fmt(loss.academy.remainder)} graduates, ${fmt(loss.science.remainder)} Publications) will be lost.`;
-  const missionLosses=Object.entries(loss.missions).map(([id,state])=>`${definitions.missions.find(mission=>mission.id===id)?.name}: ${fmt(state.progress)} s cycle progress and ${fmt(state.remainder)} fractional Publications`);
-  if (missionLosses.length) el('prestige-work-loss').textContent+=` Space missions reset: ${missionLosses.join('; ')}.`;
-  if (Object.keys(loss.joint.programs).length || loss.joint.finaleProgress!==null) el('prestige-work-loss').textContent+=` Joint science resets: ${Object.keys(loss.joint.programs).length} programs, their timer progress and fractional rewards, plus ${loss.joint.completedAtTick!==null?'the completed synthesis':loss.joint.finaleProgress!==null?fmt(loss.joint.finaleProgress)+' s of final synthesis progress':'any synthesis progress'}.`;
+  el('prestige-work-loss').textContent=`${loss.classrooms} classrooms, their timer progress and ${fmt(loss.academy.remainder)} fractional graduates, ${loss.researchTeams} ground research teams, all mission and joint production, Publications, review markers and any completed synthesis will be lost.`;
   const confirm=/** @type {HTMLButtonElement} */(el('confirm-prestige'));
   confirm.disabled=awaitingNewRun || !preview.eligible; confirm.textContent=`Reset everything & earn ${preview.award} Insight`;
   el('insight-wallet').textContent=`${insight.points} Insight available · +${insight.lastAward} earned from the previous run`;
@@ -278,8 +299,8 @@ function render() {
   if (hasPrerequisite(game,'academy')) balances.push(['Unassigned people',summary.population.available,`${summary.population.total} trained · ${summary.population.appointed} appointed`]);
   if (hasPrerequisite(game,'research')) balances.push(['Expertise',game.state.resources.X,`+${fmt(summary.rates.X??0)}/s`]);
   if (hasPrerequisite(game,'engineering')) balances.push(['Engineering Progress',game.state.resources.E,`+${fmt(summary.rates.E??0)}/s`]);
-  if (hasPrerequisite(game,'joint-science')) balances.push(['Collaboration Credits',game.state.resources.C,`${fmt(summary.rates.C??0)}/s average`]);
-  if (hasPrerequisite(game,'photometry')) balances.push(['Publications',game.state.science.publications,`${summary.grants.active} / ${summary.grants.capacity} grants`]);
+  if (hasPrerequisite(game,'joint-science')) balances.push(['Collaboration Credits',game.state.resources.C,`+${fmt(summary.rates.C??0)}/s`]);
+  if (hasPrerequisite(game,'photometry')) balances.push(['Publications',game.state.science.publications,`+${fmt(summary.rates.science??0)}/s · ${summary.grants.active} / ${summary.grants.capacity} grants`]);
   el('balances').replaceChildren(...balances.map(([name,value,note]) => {
     const node=document.createElement('div'); node.className='balance';
     const label=document.createElement('span'); label.textContent=name;
@@ -292,7 +313,7 @@ function render() {
   const next=definitions.investments.find(item=>item.id===summary.guidance.nextId);
   if (next && next.requires.every(id=>hasPrerequisite(game,id))) {
     const quote=quoteCommand(game,definitions,balance,{type:'buyInvestment',investmentId:next.id});
-    let savingSeconds=0;
+    let savingSeconds=Math.max(0,(next.publications??0)-game.state.science.publications)/(summary.rates.science||Infinity);
     for (const [currency,cost] of Object.entries(quote.costs)) {
       const available=currency==='N'?summary.population.available:game.state.resources[/** @type {import('../core/types.js').StockId} */(currency)]??0;
       const needed=Math.max(0,cost-available);
@@ -304,9 +325,17 @@ function render() {
     }
   }
 
+  if (summary.prestige.encouraged) {
+    el('suggestion').textContent=`Your first network is complete. Expansion is a major cost step: about ${fmt(summary.prestige.expansionWaitSeconds/60)} min of passive Funding/Engineering saving before further investment. Prestige for +${summary.prestige.award} Insight to accelerate the rebuild and future production, or grow this run's workshop and support. No reset is required.`;
+  }
+
   for (const station of summary.stations) {
     const node=el(`station-${station.id}`); node.hidden=!station.visible;
     const body=/** @type {HTMLElement} */(q(node,'.station-body')); body.hidden=!station.open;
+    const fresh=summary.newOptions.filter(item=>item.station===station.id);
+    node.classList.toggle('has-new-options',fresh.length>0);
+    const review=q(node,'.review-new'); review.hidden=!fresh.length; review.textContent=`${fresh.length} new · Review`;
+    review.setAttribute('aria-label',`${station.name}: review ${fresh.length} new options`);
     const income=q(node,'.station-income');
     let amount=0; let rate=0; let caption=station.output;
     if (station.id==='observatory') { amount=game.state.resources.D; rate=summary.rates.D??0; }
@@ -318,7 +347,7 @@ function render() {
       amount=game.state.resources[key]; rate=summary.rates[key]??0;
     }
     q(income,'strong').textContent=fmt(amount); q(income,'span').textContent=caption;
-    q(income,'small').textContent=station.id==='joint'?`${fmt(rate)}/s average · rewards arrive at cycle completion`:station.id==='science'?`${fmt(rate)} Publications/s average · ${summary.science.timers.length} ground teams · ${summary.missions.filter(mission=>mission.state).length} space missions · ${summary.joint.programs.filter(program=>program.state).length} joint programs`:station.id==='academy'?`${fmt(rate)} graduates/s average · ${summary.population.total} total trained`:`+${fmt(rate)}/s passive`;
+    q(income,'small').textContent=station.id==='science'?`+${fmt(rate)} Publications/s · ${summary.science.teams} ground teams · ${summary.missions.filter(mission=>mission.commissioned).length} space missions · ${summary.joint.programs.reduce((n,program)=>n+program.teams,0)} joint teams`:station.id==='academy'?`${fmt(rate)} graduates/s average · ${summary.population.total} total trained`:`+${fmt(rate)}/s passive`;
   }
   for (const action of definitions.actions) {
     const button=/** @type {HTMLButtonElement} */(q(document,`[data-action="${action.id}"]`));
@@ -335,15 +364,18 @@ function render() {
     const count=getPurchaseCount(game,item.id); const complete=count>=item.maxLevel;
     row.hidden=!meets(item.requires) && count===0;
     row.classList.toggle('complete',complete);
+    const fresh=summary.newOptions.some(option=>option.id===item.id);
+    row.classList.toggle('is-new',fresh); row.tabIndex=0;
+    q(row,'.new-option').hidden=!fresh;
     q(row,'.owned').textContent=complete?(item.kind==='discovery'?'✓ Researched':'✓ Installed'):count?`${count} ${item.kind==='appointment'?'appointed':'owned'}`:'';
     const quote=quoteCommand(game,definitions,balance,{type:'buyInvestment',investmentId:item.id});
     const button=/** @type {HTMLButtonElement} */(q(row,'button'));
     button.disabled=awaitingNewRun || !quote.ok;
     q(button,'small').textContent=price(quote.costs);
-    q(row,'.blocked').textContent=quote.ok?'':quote.blockedReasons.join(' · ');
+    q(row,'.blocked').textContent=quote.ok?(item.publications?`Qualified: ${item.publications} Publications · record not spent`:''):quote.blockedReasons.join(' · ');
     button.setAttribute('aria-label',`${item.name} · ${price(quote.costs)}`);
     const gain=previewInvestment(game,definitions,balance,item.id);
-    const parts=Object.entries(gain.passive).map(([key,value])=>`+${fmt(value)} ${key==='training'?'graduates on average':key==='science'?'Publications on average':currencyName(definitions,key)}/s`);
+    const parts=Object.entries(gain.passive).map(([key,value])=>`+${fmt(value)} ${key==='training'?'graduates on average':key==='science'?'Publications':currencyName(definitions,key)}/s`);
     if (gain.activeGain>1e-9) parts.push(`${gain.actionName}: +${fmt(gain.activeGain)} more/action`);
     if (gain.analysisGain>1e-9) parts.push(`Analyze 10: +${fmt(gain.analysisGain)} more Knowledge`);
     q(row,'.purchase-gain').textContent=parts.length?`This purchase: ${parts.join(' · ')}`:'';
@@ -359,10 +391,9 @@ function render() {
     button.textContent=`Analyze ${button.dataset.process==='all'?'all':'10 Data'} → ${fmt(quantity*analysisYield(game,definitions,balance))} Knowledge now`;
     button.disabled=awaitingNewRun || !quoteCommand(game,definitions,balance,{type:'processData',quantity}).ok;
   });
-  for (const kind of /** @type {const} */(['academy','science'])) {
+  for (const kind of /** @type {const} */(['academy'])) {
     const cycle=summary[kind];
-    const noun=kind==='academy'?'graduate':'Publication';
-    el(`${kind}-cycle-info`).textContent=`${kind==='science'?(hasPrerequisite(game,'stellar-spectroscopy')?'Brightness and stellar spectra':definitions.programs[0].name)+' · ':''}${cycle.timers.length} independent ${kind==='academy'?'classrooms':'research teams'} · ${fmt(cycle.reward)} ${noun}(s) per ${cycle.seconds}-second cycle · ${fmt(cycle.remainder)} fractional ${noun}(s) saved.`;
+    el(`${kind}-cycle-info`).textContent=`${cycle.timers.length} independent classrooms · ${fmt(cycle.reward)} graduates per ${cycle.seconds}-second cycle · ${fmt(cycle.remainder)} fractional graduates saved.`;
     const list=el(`${kind}-timers`);
     while (list.children.length>cycle.timers.length) list.lastElementChild?.remove();
     for (let i=0;i<cycle.timers.length;i++) {
@@ -373,7 +404,7 @@ function render() {
         const progress=document.createElement('progress');
         row.append(label,progress); list.append(row);
       }
-      const label=`${kind==='academy'?'Classroom':'Research team'} ${i+1}`;
+      const label=`Classroom ${i+1}`;
       q(row,'span').textContent=`${label} · ${fmt(cycle.seconds-cycle.timers[i])} s remaining`;
       const progress=/** @type {HTMLProgressElement} */(q(row,'progress'));
       progress.max=cycle.seconds; progress.value=cycle.timers[i]; progress.setAttribute('aria-label',`${label} cycle progress`);
@@ -387,27 +418,20 @@ function render() {
     const next=stages.find(id=>!hasPrerequisite(game,id));
     const card=q(document,`[data-mission="${mission.id}"]`);
     /** @type {HTMLElement} */(card).hidden=mission.id==='infrared' && !hasPrerequisite(game,'orbital-commissioning');
-    q(card,'[data-assembly]').textContent=mission.state?'Commissioned · repeats automatically with no upkeep':`${completed} / ${stages.length} construction stages · next: ${definitions.investments.find(item=>item.id===next)?.name??'commissioning'}`;
-    const progress=/** @type {HTMLProgressElement} */(q(card,'progress')); progress.hidden=!mission.state; progress.value=mission.state?.progress??0;
-    q(card,'[data-mission-status]').textContent=mission.state?`${fmt(mission.seconds-mission.state.progress)} s remaining · ${fmt(mission.reward)} Publications per ${mission.seconds}-second cycle · ${mission.state.cycles} completed · ${fmt(mission.state.remainder)} fractional Publications saved.`:
-      mission.id==='infrared' && !hasPrerequisite(game,'orbital-result')?'The first orbital telescope must complete one science cycle before the separate flagship can begin.':'Complete the construction purchases below. Science begins at commissioning.';
+    q(card,'[data-assembly]').textContent=mission.commissioned?'Commissioned · continuous production with no upkeep':`${completed} / ${stages.length} construction stages · next: ${definitions.investments.find(item=>item.id===next)?.name??'commissioning'}`;
+    q(card,'[data-mission-status]').textContent=mission.commissioned?`+${fmt(mission.rate)} Publications/s. Earlier instruments keep producing.`:'Complete construction and required research methods below. Production starts at commissioning.';
   }
+  el('science-production').textContent=`${summary.science.teams} ground teams · +${fmt(summary.science.teams*definitions.programs[0].publicationsPerSecond*multiplier(game,definitions,'science'))} Publications/s from ground teams. Publications are a cumulative record, never spent. Add teams or improve science to qualify for the next milestone sooner.`;
   for (const program of summary.joint.programs) {
     const card=q(document,`[data-joint-program="${program.id}"]`);
-    const progress=/** @type {HTMLProgressElement} */(q(card,'progress'));
-    progress.hidden=!program.state; progress.value=program.state?.progress??0;
     const quote=quoteCommand(game,definitions,balance,{type:'buyInvestment',investmentId:program.investmentId});
-    q(card,'[data-joint-status]').textContent=program.state
-      ?`${fmt(program.seconds-program.state.progress)} s remaining · ${fmt(program.creditReward)} Credits + ${fmt(program.publicationReward)} Publications per ${program.seconds}-second cycle · ${program.state.cycles} results · fractional rewards: ${fmt(program.state.remainder)} Credits, ${fmt(program.state.publicationRemainder)} Publications.`
-      :`${price(quote.costs)}, paid once. ${quote.ok?'Establish this program below to start its automatic cycles.':quote.blockedReasons.join(' · ')}`;
+    q(card,'[data-joint-status]').textContent=program.teams
+      ?`${program.teams} teams · +${fmt(program.creditRate)} Credits/s + ${fmt(program.publicationRate)} Publications/s. Add another team below; prices grow 60%.`
+      :`Establish a team: ${price(quote.costs)}. ${quote.ok?'Ready below.':quote.blockedReasons.join(' · ')}`;
   }
-  const completed=summary.joint.programs.filter(program=>(program.state?.cycles??0)>0).length;
-  el('synthesis-requirements').textContent=`${completed} / ${summary.joint.programs.length} joint programs have returned results. All three contribute to the final synthesis.`;
-  const synthesisProgress=/** @type {HTMLProgressElement} */(el('synthesis-progress'));
-  synthesisProgress.max=summary.joint.finale.seconds; synthesisProgress.value=summary.joint.finaleProgress??0; synthesisProgress.hidden=summary.joint.finaleProgress===null;
-  el('synthesis-status').textContent=summary.joint.completedAtTick!==null?'Synthesis complete. Your observatories continue producing.'
-    :summary.joint.finaleProgress!==null?`${fmt(summary.joint.finale.seconds-summary.joint.finaleProgress)} s remaining · fixed ${summary.joint.finale.seconds}-second synthesis · paid in full; all stations continue.`
-    :`Once every program returns a result, begin the synthesis below. It takes ${summary.joint.finale.seconds} seconds with no recurring costs.`;
+  const completed=summary.joint.programs.filter(program=>program.teams>0).length;
+  el('synthesis-requirements').textContent=`${completed} / ${summary.joint.programs.length} joint programs established · ${fmt(game.state.science.publications)} / ${fmt(definitions.investments.find(item=>item.id===definitions.finale.investmentId)?.publications??0)} Publications · ${hasPrerequisite(game,'network-integration')?'network integration complete':'develop network integration in Research'}.`;
+  el('synthesis-status').textContent=summary.joint.completedAtTick!==null?'Synthesis complete. Your observatories continue producing.':'Build all three programs and integrate the network. Accumulate the required resources, then complete synthesis with one purchase.';
   el('ending-receipt').hidden=summary.joint.completedAtTick===null;
   el('ending-time').textContent=summary.joint.completedAtTick===null?'':`Completed in run ${game.state.clock.campaignIndex} after ${fmt(summary.joint.completedAtTick*TICK_SECONDS/60)} simulated minutes.`;
   el('continue-observing').hidden=running;

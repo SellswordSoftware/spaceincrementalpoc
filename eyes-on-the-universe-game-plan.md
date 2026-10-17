@@ -1,8 +1,100 @@
 # Eyes on the Universe
 
-Game design plan — draft 1.2 — 2026-10-16
+Game design plan — draft 1.4 — 2026-10-17
 
-## Progression revision — 2026-10-17
+## Prestige pacing revision — 2026-10-17
+
+Target the first attractive prestige around **10 minutes at normal 1× speed**, with
+no time gate. Complete the founding network: nebula frontier, one observing grant
+and robotic dome. This is the earliest intended reset decision; the expanded
+observatory is the first major economic cost step. All later capabilities remain
+reachable without any prestige. Keep Academy timers and continuous science intact.
+
+Preserve the quick opening through tracking/workshop. Increase the reflector and
+enclosure costs ×3, camera and Academy ×4, Research ×3, photometry ×4, workstation
+×3, robotic dome ×6 and nebula research ×5 relative to the preceding balance.
+The expanded observatory costs 1,280 Engineering + 5,120 Funding + 1,280 Knowledge.
+Then increase costs more steeply by tier: mountain ×12, radio ×20, optical orbital
+stages ×40–60, infrared stages ×60–100. These are per-item changes from the previous
+balance, not multipliers applied again on load or prestige. Local repeatable growth
+still costs increasing amounts; global Insight multipliers make rebuilding and
+later investment faster.
+
+Research/flagship grants now yield 4 / 8 base Funding per second and their stock
+prices grow 80% per purchase, preventing late Funding from overwhelming all prices.
+Publications remain useful: mountain 30, radio 100, space program 200, orbital
+commissioning 400, infrared program 1,000, infrared commissioning 2,000, deep-field
+research 3,000 and synthesis 5,000. Joint programs unlock at 400 / 800 / 3,000;
+network integration qualifies at 1,000. Synthesis costs 100 million Data, 1 million
+Funding, 100,000 Knowledge, 100,000 Engineering and 500 Credits; payment completes it.
+
+Prestige pays 5 base Insight plus the existing diminishing Publication bonus.
+Engineering heritage costs 2 Insight initially and doubles Engineering and
+Collaboration output per level (prices double; six levels), making construction
+and coordinated production directly improvable through prestige. Other modifiers
+keep their current effects and prices.
+
+Suggest prestige when eligible, before the first expansion, if its remaining
+Funding/Engineering saving time at current passive rates is at least five minutes.
+Show the saving estimate with options to invest or rebuild. This is an economic
+nudge, never an automatic reset, countdown, forced modal or content gate.
+
+`scenario:pacing` uses ordinary commands, reinvestment, instant analysis and active
+assistance at the normal four-click-per-second cap. The measured first network is
+566.5 seconds (9:26.5), awarding 6 Insight; spending two each on Engineering heritage,
+Shared enthusiasm and Institutional memory rebuilds it in 309.25 seconds (5:09.25).
+These are reproducible reference-policy measurements, not an optimal-play bound or
+a promise that every player reaches prestige at exactly ten minutes. The user's
+previous 20-minute completion was at 1× without time skips. Validate this new curve
+with another human playtest before selecting later reset or total completion targets.
+
+Preserve existing saves exactly; only future prices/rates/requirements change.
+The continuous-production state shape remains schema 14 with a new configuration
+version and explicit migration of the preceding bundled fingerprint. No extra
+Insight is retroactively awarded. Keep one progression test with timing assertions.
+
+## Prior resource relationships revision — 2026-10-17
+
+This revision supersedes earlier science-cycle and finale-countdown contracts.
+The newer prestige pacing revision above supersedes its numeric costs/thresholds.
+Academy retains independent 40-second classrooms. Ground research, commissioned
+space telescopes and joint teams instead generate fractional Publications and
+Collaboration Credits continuously. Production has no upkeep or restart clicks.
+Practice, staff, methods and Insight increase rates. Final synthesis completes
+on payment; waiting belongs to earning its resources, not a separate countdown.
+
+Publications remain a cumulative, unspent scientific record. Totals qualify the
+network for advanced grants (15 / 100), facilities, missions, joint programs and
+the ending (750). All grant tiers share floor(Publications) slots; higher tiers
+provide more Funding per purchase. Expertise funds required advanced calibration,
+orbital operations, infrared calibration and network integration. Research capacity
+therefore supports physical progression throughout the run. Joint teams can be
+added repeatedly, consuming one graduate plus rising upfront resource costs.
+Collaboration Credits improve the network and are required for synthesis.
+
+Newly available options receive a persistent gold station icon, an “N new” review
+button and individual row markers. Availability means prerequisites and Publication
+milestones met, independent of affordability. Focusing or clicking a row reviews
+it without buying; the station button jumps to the next new option. Save this
+review state, reset it at prestige, and never mark repeat purchases or affordability
+changes as new. Unlock feedback names the option and destination station.
+
+Migrate existing production progress into accrued fractional rewards; preserve
+wallets, purchases, existing graduates, classroom phases, Insight and completed endings.
+Grandfather existing joint teams with dedicated staff, preserving the previous
+unassigned graduate count. An
+already-paid final synthesis completes on migration. No prestige gates. Overall
+pacing remains deliberately untuned. Validate one ordinary-command first-run route,
+continuous rewards, research/publication links, discovery markers and full reset;
+keep tests minimal rather than adding edge-case suites.
+
+## Earlier design and milestone history
+
+The sections below record prior implementation decisions. The resource relationships
+revision above is authoritative where science timers, result gates, grant tiers or
+final synthesis differ.
+
+### Progression revision — 2026-10-17
 
 Prestige is an economic choice, never a capability requirement. Every system and
 the ending are reachable in run one. Equipment/research/results still gate their

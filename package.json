@@ -15,7 +15,8 @@
     "scenario:engineering": "node scenarios/engineering.js",
     "scenario:horizons": "node scenarios/horizons.js",
     "scenario:synthesis": "node scenarios/synthesis.js",
-    "scenario:progression": "node scenarios/progression.js"
+    "scenario:progression": "node scenarios/progression.js",
+    "scenario:pacing": "node scenarios/pacing.js"
   },
   "devDependencies": {
     "@types/node": "24.12.4",

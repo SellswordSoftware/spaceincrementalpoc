@@ -4,7 +4,7 @@ export { ValidationError } from './schema.js';
 /** @param {import('./types.js').Definitions} definitions */
 export function validateDefinitions(definitions) {
   const ids = new Set();
-  const known = new Set([...definitions.investments.map(item => item.id),'first-graduate','first-publication','orbital-result','infrared-result',...definitions.jointPrograms.map(program=>`joint-result-${program.id}`)]);
+  const known = new Set([...definitions.investments.map(item => item.id),'first-graduate','first-publication']);
   for (const item of definitions.investments) {
     requireValid(!ids.has(item.id),'definitions',`duplicate purchase ${item.id}`); ids.add(item.id);
     requireValid(definitions.stations.some(station => station.id === item.station),item.id,'unknown station');
@@ -21,8 +21,7 @@ export function validateDefinitions(definitions) {
   }
   for (const program of definitions.programs) {
     requireValid(program.requires.every(id=>known.has(id)),program.id,'unknown prerequisite');
-    requireValid(program.work>0,program.id,'work must be positive');
-    integer(program.publications,program.id);
+    requireValid(program.publicationsPerSecond>0,program.id,'production must be positive');
   }
 }
 

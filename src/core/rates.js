@@ -5,14 +5,11 @@
 export function getPurchaseCount(game,id) { return game.state.purchases[id] ?? 0; }
 /** @param {GameState} game @param {string} id */
 export function hasPrerequisite(game,id) {
-  if (id.startsWith('joint-result-')) return (game.state.joint.programs[id.slice(13)]?.cycles??0)>0;
-  if (id==='orbital-result') return (game.state.missions.orbital?.cycles??0)>0;
-  if (id==='infrared-result') return (game.state.missions.infrared?.cycles??0)>0;
-  if (id==='first-publication') return game.state.science.publications>0;
+  if (id==='first-publication') return game.state.science.publications+1e-9>=1;
   return id==='first-graduate'?game.state.population.total>0:getPurchaseCount(game,id)>0;
 }
 /** @param {Definitions} definitions @param {string} id */
-export function prerequisiteName(definitions,id) { return definitions.investments.find(item=>item.id===id)?.name ?? (id.startsWith('joint-result-')?`first result from ${definitions.jointPrograms.find(program=>program.id===id.slice(13))?.name??id}`:null) ?? (id==='orbital-result'?'first completed orbital science cycle':id==='infrared-result'?'first completed infrared science cycle':id==='first-graduate'?'first graduate':id==='first-publication'?'first Publication':id); }
+export function prerequisiteName(definitions,id) { return definitions.investments.find(item=>item.id===id)?.name ?? (id==='first-graduate'?'first graduate':id==='first-publication'?'first Publication':id); }
 /** Permanent Insight factors multiply the ordinary run's local bonuses.
  * @param {GameState} game @param {Definitions} definitions @param {import('./types.js').StatId} stat */
 export function insightMultiplier(game,definitions,stat) {
@@ -47,11 +44,11 @@ export function analysisYield(game,definitions,balance) { return balance.knowled
 export function baseProduction(game,definitions,balance) {
   /** @type {import('./types.js').Output} */
   const output={};
-  if (hasPrerequisite(game,'photometry')) output.science=(1+getPurchaseCount(game,'appoint-scientist'))*definitions.programs[0].publications/definitions.programs[0].work;
-  for (const mission of definitions.missions) if (hasPrerequisite(game,mission.commissionId)) output.science=(output.science??0)+mission.publications/mission.seconds;
+  if (hasPrerequisite(game,'photometry')) output.science=(1+getPurchaseCount(game,'appoint-scientist'))*definitions.programs[0].publicationsPerSecond;
+  for (const mission of definitions.missions) if (hasPrerequisite(game,mission.commissionId)) output.science=(output.science??0)+mission.publicationsPerSecond;
   for (const program of definitions.jointPrograms) if (hasPrerequisite(game,program.investmentId)) {
-    output.C=(output.C??0)+program.credits/program.seconds;
-    output.science=(output.science??0)+program.publications/program.seconds;
+    output.C=(output.C??0)+program.creditsPerSecond*getPurchaseCount(game,program.investmentId);
+    output.science=(output.science??0)+program.publicationsPerSecond*getPurchaseCount(game,program.investmentId);
   }
   if (hasPrerequisite(game,'academy')) output.training=(1+getPurchaseCount(game,'appoint-teacher'))/balance.course.seconds;
   for (const item of definitions.investments) for (const [key,value] of Object.entries(item.output)) {

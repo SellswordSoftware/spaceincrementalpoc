@@ -1,8 +1,8 @@
 # Eyes on the Universe
 
-An incremental astronomy prototype with independent stations, a single Data wallet,
-and permanent production investments. Research new targets, add telescope capacity,
-and use other stations to accelerate the growing observatory network.
+An incremental astronomy prototype built around independent stations, one Data
+wallet, permanent investments and optional prestige. Click or hold to help a
+station while every purchased producer continues working.
 
 ## Run locally
 
@@ -13,301 +13,145 @@ npm ci
 npm run dev
 ```
 
-Open <http://127.0.0.1:5173>. Set `PORT` for another port. No framework, bundler,
-backend, artwork pipeline or runtime dependency is required.
+Open <http://127.0.0.1:5173>. Set `PORT` for another port. Native JavaScript
+modules run directly; no framework, bundler or runtime dependencies are required.
 
-## The opening loop
+## Resource flow
 
-1. Click/hold **Observe the sky**. Spend 5 Data to establish an observing routine,
-   automating the founding telescope at 1 base Data/s.
-2. Open Analysis for 10 Data. **Analyze 10** spends Data for immediate Knowledge;
-   **Expand archive research** spends 25 Data initially for 0.2 base Knowledge/s
-   permanently. Repeat archive investments have rising prices.
-3. Spend Knowledge to open Outreach. Share the sky or add standing activities to
-   earn Interest. Spend Interest on permanent supporter groups in the Support office.
-4. Research Jupiter for 8 Knowledge: the observing frontier rises from ×1 to ×2,
-   increasing the same Data stream and active observing. Buy additional telescopes
-   with Funding to increase the capacity benefiting from that frontier.
-5. Install tracking and open the Engineering workshop. Research Saturn (×3),
-   build a reflector and permanent enclosure, then install the camera and research
-   star clusters (×5) to reveal Academy. Engineering already produces while these
-   other stations grow.
-6. Train graduates and permanently appoint them at whichever station needs growth.
-   The first graduate reveals Research regardless of their appointment.
-7. Use Research's mentoring programs to produce Expertise. Expertise improves
-   operating efficiency; Knowledge buys scientific capabilities and target unlocks.
-   Research also enables the robotic dome, the next physical observatory milestone.
-8. Develop photometry in **Scientific programs**, let its research team publish automatically,
-   then use its Publication to open grants in the Support office. Research nebulae
-   (×8) to unlock observatory expansion and meet the discovery requirement for prestige.
-
-**Data/s = installed observing capacity × frontier yield × equipment/practice bonus.**
-
-There are no typed Data balances, evidence inventories or target assignments.
-Discoveries are permanent upgrades recorded in the journal. A frontier upgrade
-represents network scientific productivity, not a claim that each small telescope
-can directly observe every frontier object. Older equipment remains productive.
-
-Each station shows local output, passive rates, owned producers, action yield,
-prices and the actual marginal gain after bonuses. Active assistance benefits
-from appropriate equipment/practice upgrades. Analysis methods and workstations
-improve both passive Knowledge and instant Knowledge per Data. Passive producers
-need no recurring wallet inputs and no salaries.
-
-**Next unlock** follows real progression gates. **Optional investment** suggests
-ways to grow without prescribing a specific archive purchase or staff appointment.
-The Data breakdown separates capacity, frontier and bonuses. A single common
-archive-research family replaces the previous lunar/Jupiter/imaging studies.
-
-## Academy and permanent staff
-
-Opening the academy includes a classroom that automatically produces one base
-graduate every **40 seconds**. **Establish teaching team** permanently appoints one
-qualified graduate and adds another independent classroom. Initial stock cost:
-**30 Funding + 10 Knowledge**, tripling per extra team (30, 90, 270, 810 Funding); graduate cost stays one.
-The Academy unlock costs **80 Funding + 15 Knowledge + 4 Interest**.
-
-Teaching practice and Insight increase rewards per completion, keeping timers fixed.
-Fractional graduates carry into future completions; only whole people can be appointed.
-Each classroom shows its progress and remaining time. There are no course purchases,
-teaching assistance, restart clicks or recurring tuition.
-
-Each appointment uses one unassigned graduate and cannot be reversed. Observers add
-observing capacity; analysts, educators, fundraisers and researchers add local currency.
-Teaching/scientific teams add parallel timed producers. The first classroom continues
-working regardless of where graduates are appointed.
-
-## Time and saves
-
-Fresh runs start live. Click/hold works with mouse, touch and Space/Enter. Assistance
-is bounded to four actions per simulated second; only one station is actively
-helped, while passive output continues everywhere. Release, cancellation, loss of
-focus, pause or hiding the page ends the hold.
-
-Run/Pause, 1×/5×/20×, +10 s and +60 s are prototype utilities. All advance the same
-0.25-second ticks. Hidden tabs pause and closed tabs earn no progress. Reload
-restores paused. No held input is saved.
-
-Local saves occur on purchases, every five seconds and page exit. Export/import
-uses the shared versioned serializer. Failed imports leave the current run intact.
-Schema **13**, simulation **0.14.0-progression**, identifies the progression revision.
-Exact P12 saves migrate with their entire state unchanged, including existing people,
-classrooms, Insight levels, timers and completion. Revised yields/prices apply going
-forward; nothing already purchased is removed.
-The exact P11 save upgrades with empty joint-science state and every previous
-wallet, purchase, timer phase, mission result, fractional reward and Insight intact.
-The exact P10 save upgrades with empty mission state, preserving all previous
-resources, purchases, timer phases, fractional rewards and Insight.
-The exact prior parallel save upgrades with its entire state unchanged, including
-Insight, timer phases and fractional rewards.
-Exact bundled P5–P7 saves upgrade automatically, preserving resources, purchases,
-people, Publications and P7 Insight. Existing teachers/scientists become teams;
-unfinished paid work becomes progress on the founding timer, capped below completion.
-No rewards are awarded during migration. Older/custom configurations keep the
-export/new-run fallback and previous-economy backup. Timers and fractional rewards
-persist; reload resumes paused.
-
-## Scientific programs and grants (P6)
-
-After Research and camera equipment, **Develop photometry** costs
-**500 Data + 30 Knowledge + 15 Funding** and includes the founding research team.
-Each team automatically produces one base Publication every **60 seconds**, repeating
-without additional spending. **Establish research team** permanently appoints one
-graduate and adds another timer. Initial stock cost: **500 Data + 20 Knowledge +
-30 Funding**, growing ×1.6 per extra team. Graduate cost stays one.
-
-Scientific practice and Insight increase Publications per completed cycle, keeping
-timers fixed. Fractional rewards carry forward; whole Publications open grant slots.
-There are no study-start buttons, active study assistance or recurring costs.
-All observing, teaching and other producers continue independently.
-
-The first Publication reveals **Open grant office** in Support (50 Funding +
-10 Knowledge). **Secure observing grant** initially costs 20 Funding + 5 Knowledge
-and adds 2 base Funding/s without upkeep. Each Publication backs one grant slot;
-Publications are not spent. More published studies open more slots. Grant prices
-increase on repeat purchases. Support shows active grants, total slots and the
-reason a further purchase is blocked.
-
-The first result and grant replace the previous end-of-prototype objective.
-P7 adds the full prestige transition and Insight shop described below.
-
-## Full-reset prestige and Insight (P7)
-
-Research the **nebula frontier** and **secure an observing grant** to become
-eligible. Review prestige from the time-control bar. Review pauses the game and
-shows the live reward, all resource balances and ordinary purchases that will be
-lost, plus classrooms, research teams, timer progress and fractional rewards. **Keep this run** cancels;
-**Export this run first** saves a portable checkpoint.
-
-**Reset everything & earn Insight** commits the reset. All ordinary currencies,
-producers, stations, target unlocks, discoveries, telescopes, equipment, staff,
-appointments, qualifications, Publications, grants and unfinished work reset.
-The new run has only the free backyard telescope, Moon baseline and starting
-balances. Permanent-within-run investments must all be rebuilt.
-
-The first eligible run earns **4 Insight**. Additional Publications add diminishing
-rewards: **2 Publications → 5 Insight; 5 → 6; 10 → 7**. Formula:
-`4 + floor(sqrt(max(0, Publications - 1)))`. Eligibility is required regardless of
-that count. The preview shows the next Publication threshold. Reward values are
-prototype seeds, not final tuning.
-
-After committing, the game stays paused in the **Insight shop**. Buy permanent
-modifiers with buttons, then **Begin run 2** (or the subsequent run). Prices double
-per level. Ordinary game actions and time advancement cannot run in the shop.
-Reload/import restores the shop without re-awarding points. Unspent Insight can
-be saved and spent at a future prestige; upgrades are purchased only between runs.
-
-| Modifier | First cost | Permanent effect per level |
-|---|---:|---|
-| Expansive observing | 2 Insight | ×2 passive Data and observing assistance |
-| Clear analysis | 2 Insight | ×2 passive Knowledge and instant Knowledge/Data |
-| Shared enthusiasm | 2 Insight | ×2 Interest and Funding, including active help |
-| Institutional memory | 2 Insight | ×1.2 graduate rewards; ×2 Expertise and Publication rewards |
-| Connected thinking | 1 Insight | ×1.05 graduate rewards; ×1.25 other production and cycle rewards; timers stay fixed |
-
-Insight factors multiply the current run's local bonuses and compound across
-levels. **Only purchased Insight modifiers and unspent Insight persist.** The run
-number and earned-point accounting are metadata, not retained production. Restart
-prototype separately confirms erasing even permanent Insight; prestige preserves it.
-
-## Engineering and ground observatories (P10)
-
-After motorized tracking, **Engineering workshop** appears.
-**30 Funding + 15 Knowledge** opens its founding bench at **0.15 Engineering Progress/s**.
-No prestige, graduate, Research institute or grant is required. Add benches
-or permanently appoint engineers to grow production. Stock prices rise with each
-purchase; engineers always require one graduate. Expertise buys engineering practice.
-Click/hold **Develop instruments** for extra Engineering Progress while all other
-stations continue. Connected thinking now includes Engineering production/help.
-
-Use Engineering Progress, Funding and Knowledge in the Observatory to build:
-
-| Facility | Initial cost | Added base capacity |
-|---|---|---:|
-| Permanent enclosure, after reflector | 10 E + 60 F + 15 K | 4 |
-| Robotic dome, after Research | 40 E + 160 F + 40 K | 8 |
-| Expanded observatory, after nebulae + a Publication | 160 E + 640 F + 160 K | 16 |
-| Mountain telescope, after galaxy research | 240 E + 1600 F + 320 K | 32 |
-
-Every earlier instrument continues producing. An architectural diagram, facility
-milestones and telescope count show the network growing. Expanded facilities open
-**galaxy imaging** (150 Knowledge, ×13 frontier); the mountain telescope opens
-**galaxy-cluster imaging** (300 Knowledge, ×21).
-
-Optional science branch: after the robotic dome, develop a **spectrograph** in
-Engineering (20 E + 40 K), then **stellar spectroscopy** in Science (40 K).
-It adds +100% of base Publications per cycle; every team's 60-second timer keeps
-its phase. No repeated sample costs or recurring spending are introduced.
-
-All Engineering resources, facilities, instruments and new discoveries reset at
-prestige. First-prestige requirements and Insight payout are unchanged.
-
-## Radio astronomy and space missions (P11)
-
-After the mountain telescope and galaxy-cluster frontier, **Radio observatory**
-reveals. The first dish costs **600 E + 3,200 F + 600 K** and adds 24 base Data capacity.
-Extra dishes add 12 capacity with escalating prices. **Research radio sources** in
-Analysis (250 Knowledge) raises the frontier to ×34 and reveals Space missions.
-Optional **Radio timing** in Science improves cycle Publication rewards.
-
-Build each space telescope using one-time Engineering, Funding and Knowledge purchases:
-
-| Mission | Construction sequence | Automatic production after commissioning |
+| Resource | Produced by | Its role |
 |---|---|---|
-| First optical orbital telescope | Space program → platform → optical payload → launch/commission | +48 base Data capacity; one base Publication per 60 seconds |
-| Infrared flagship | Infrared program → mirror/payload → thermal shield → launch/commission | +96 base Data capacity; two base Publications per 60 seconds |
+| Data | Ground, radio and space telescopes | Instant analysis, research-team purchases, joint teams and final synthesis |
+| Knowledge | Instant Data analysis and archive research | Target research, equipment, institutional methods and producer investment |
+| Interest | Outreach activities and active sharing | Permanent supporter groups and opening Academy |
+| Funding | Supporter groups, appointed fundraisers and grants | Equipment, staff teams, facilities and missions |
+| People | Academy classrooms | Permanent appointments throughout the network |
+| Expertise | Research institute, mentoring and researchers | Required calibration/operations/integration methods and station practice improvements |
+| Publications | Ground science teams, space telescopes and joint teams | Cumulative qualifications for grants, facilities, missions, joint programs and the ending; never spent |
+| Engineering Progress | Workshop benches, engineers and active development | Observatory construction, instruments and missions |
+| Collaboration Credits | Joint science teams | Network production improvements and final synthesis |
+| Insight | Concluding a run through prestige | Permanent global modifiers bought between runs |
 
-The first spacecraft supports **transit targets** (×55 frontier). Its first completed
-science cycle and the transit frontier unlock the flagship program; commissioning
-does not award an instant result. The flagship supports **infrared fields** (×89),
-then **early-galaxy deep fields** (×144) after its first science cycle.
+**Data/s = installed observing capacity × frontier yield × observing bonus.**
+Researching Moon → Jupiter → Saturn → clusters → nebulae → galaxies → radio
+sources → transit targets → infrared fields → early-galaxy fields increases the
+frontier multiplier on the same Data stream. Older equipment keeps contributing.
+The multiplier represents network productivity, not a claim that every small
+instrument can directly observe every target.
 
-Each mission has its own timer, completed-cycle counter and fractional Publication
-bank. It repeats automatically without spending Funding or Data. Science practice
-and Insight increase rewards, keeping cycles at 60 seconds. Earlier ground teams
-and the first spacecraft keep publishing while the flagship works. Orbital-monitoring
-research is another optional cycle-reward improvement. All Data enters the existing
-shared wallet; Radio/Space display their own contribution to network Data production.
+## Playing through the network
 
-The network diagram accumulates radio and orbital instruments. Mission panels show
-construction status, remaining cycle time, results and fractional rewards. Both
-missions, dishes, construction and discoveries reset at prestige. Existing Insight
-rules and first-prestige requirements remain unchanged.
+1. Click/hold **Observe the sky**, buy an observing routine, then open Analysis.
+   Analyze Data for immediate Knowledge or add archive research for passive income.
+2. Open Outreach and Support. Spend Interest on supporter groups, Funding on
+   telescopes, and Knowledge on better targets and equipment.
+3. Tracking opens Engineering early. Build a reflector and enclosure before Academy,
+   then progress through robotic dome, expanded observatory and mountain telescope.
+4. Academy's founding classroom graduates every **40 seconds**. Teaching teams add
+   independent classrooms. Funding/Knowledge prices triple per added team; practice
+   and Insight increase graduate rewards, keeping the timer fixed.
+5. The first graduate reveals Research. Mentoring and researchers produce Expertise.
+   Develop photometry for continuous Publications, add research teams and improve
+   science practice to build the scientific record faster.
+6. Spend Expertise on **advanced calibration** (5 Publications), **orbital operations**
+   (30), **infrared calibration** (1,000) and **network integration** (1,000). These enable
+   the spectrograph/mountain telescope, optical payload, flagship mirror and ending.
+7. Publications open grants, then qualify research grants at **15** and flagship
+   grants at **100**. Grants add **2 / 4 / 8 base Funding/s**, respectively. All tiers
+   share `floor(Publications)` slots. Buying grants never spends Publications.
+8. Build radio instruments and the optical orbital telescope, then a distinct cooled
+   infrared flagship. Each commissioned mission immediately adds continuous Data
+   and Publications. Earlier ground and space instruments remain productive.
+9. At **400 Publications**, the commissioned orbital telescope, radio observatory
+   and Research enable Joint science. Complementary programs connect ground/radio,
+   orbital/spectroscopic and mountain/infrared capabilities.
+10. Joint teams continuously earn Credits and Publications. Add more teams or improve
+    collaboration/science to scale output; each team permanently appoints one graduate
+    and its stock costs grow **60%** per purchase. Credits buy network improvements.
+11. Establish all three joint programs, develop network integration, reach **5,000
+    Publications**, then pay **100,000,000 Data + 1,000,000 Funding + 100,000 Knowledge +
+    100,000 Engineering + 500 Credits** to complete synthesis immediately. The browser
+    pauses and shows the ending; **Keep observing** resumes production.
 
-## Joint science and the ending (P12)
+Only Academy has producer countdowns. Ground science, missions and joint teams
+produce fractional rewards continuously. Synthesis has no countdown. Waiting comes
+from accumulating resources, and investments increase production. Producers have no
+recurring wallet costs, wages, allocation percentages or restart clicks.
 
-Your first orbital result reveals **Joint science**. Open the center for
-**100 Engineering + 600 Funding + 500 Knowledge**, then establish complementary
-programs with one-time purchases:
+## First prestige pacing
 
-| Program | Required capabilities | Base rewards every 60 seconds |
-|---|---|---|
-| The changing sky | Photometry + radio timing | 1 Collaboration Credit + 2 Publications |
-| Worlds in context | Orbital monitoring + stellar spectroscopy + transit frontier | 2 Credits + 3 Publications |
-| Light across time | Mountain telescope + first infrared result + deep-field frontier | 3 Credits + 4 Publications |
+The first reset decision is intended around **10 minutes at normal 1×**: complete
+nebula research, the robotic dome and the first grant. The expanded observatory
+then makes a substantial economic step, with steeper mountain/radio/space tiers
+beyond it. No content requires a previous reset. A highlighted prestige button
+and saving estimate suggest rebuilding when the next expansion is expensive;
+investing in this run remains available.
 
-Each program has an independent automatic timer. Science bonuses improve
-Publications; Expertise-funded collaboration practice and Connected thinking improve
-Credits. Fractional rewards carry forward and timers stay fixed. There are no
-recurring costs or restart clicks. Credit purchases improve network observing,
-analysis, Engineering and science, with escalating prices.
+Prestige pays **5 base Insight** plus the Publication bonus. **Engineering heritage**
+starts at 2 Insight and doubles Engineering and Collaboration production per level.
+Research and flagship grants yield **4 / 8 Funding/s** with 80% stock price growth.
+The opening, later prices and scientific record requirements now support repeated
+rebuilding rather than a quick first-run finish.
 
-Once every program has returned a result, **Begin final network synthesis**:
-**1,000,000 Data + 1,500 Funding + 2,500 Knowledge + 200 Engineering + 20 Credits**.
-The final **90-second** project runs while every station continues. Its completion
-pauses the browser and shows the ending. **Keep observing** resumes production;
-prestige remains available. Reload preserves the ending, and completion fires once.
-All joint progress, Credits, upgrades and the completion record reset at prestige.
+`npm run scenario:pacing` measures attentive play using earned resources and actual
+clicks, analysis and reinvestment: **9:26.5** to the first reset, **6 Insight**, then
+**5:09.25** to rebuild with Engineering/support/research modifiers. This is one
+reference policy; faster investment choices can reach it earlier. It is not a
+hard ten-minute lock or a final total-game-duration target. Existing saves retain
+all progress and purchased levels; the new curve applies to future production
+and purchases. Start fresh to assess the first-prestige target.
+
+## Finding new options
+
+An unlocked, unreviewed option gets a **New** row marker, a gold station icon and
+an **N new · Review** button. Review jumps to the next new row. Clicking or focusing
+a row acknowledges it without buying, even when it is unaffordable. Scrolling past
+it does not clear it. Wallet changes and later repeat purchases do not create new
+notifications. Publication qualification can unlock a new option; merely affording
+its price cannot. Unlock feedback names both the option and destination station.
+Review state survives save/reload and resets at prestige.
+
+## Prestige and saves
+
+Every system and the ending remain reachable in the first run. Prestige becomes
+available after nebula research, building the robotic dome and securing an observing grant. Review the reset,
+conclude the run and spend Insight between runs. All ordinary currencies, purchases,
+people, discoveries, classroom phases and the ending reset. Only Insight upgrades
+and unspent Insight carry forward. No capability requires previous prestige.
+
+Insight boosts Data, Knowledge, support, Expertise, science, Engineering and
+collaboration. Teaching factors are milder: Institutional memory gives ×1.2 teaching
+per level while retaining ×2 Research/science; Connected thinking gives ×1.05
+teaching and ×1.25 other production. Classroom timers stay fixed.
+
+Autosave runs locally; reload/import resumes paused. Export JSON for a portable
+copy. No offline progress. Import validates before replacing the current game.
+Bundled prior saves (schemas 6–14) migrate their purchases and wallets. Old science
+phases and fractional reward banks convert into accrued Publications/Credits.
+Existing joint teams retain dedicated staff without taking previously unassigned
+graduates. Already-paid synthesis completes on migration. Earlier construction
+remains owned even if this revision adds requirements to future purchases.
 
 ## Verification and status
 
 ```sh
 npm run check
 node --test test/stations.test.js
-npm run scenario:stations
-npm run scenario:prestige
-npm run scenario:engineering
-npm run scenario:horizons
-npm run scenario:synthesis
 npm run scenario:progression
+npm run scenario:pacing
 ```
 
-The existing single progression test now follows the network through a full reset,
-shop save/reload and faster rebuilding. It checks that in-flight timers and fractional rewards are
-listed and discarded, every ordinary state partition resets, rewards/Insight spending
-survive reload, and the same policy rebuilds faster. The same test continues through Engineering, spectroscopy, new frontiers and a
-further full reset. No broad new suite was added.
-Existing server/import smoke checks remain available through `npm test`.
+One progression integration test covers the ordinary-command first-run route,
+continuous science/Credits, required methods, review persistence, immediate ending
+and full reset. `npm test` also includes the existing server/import smoke checks.
+Individual station/prestige/engineering/horizons/synthesis scenarios remain available.
+They use actual commands and earned resources, with no seeded wallets. Reference
+policies demonstrate reachability, not optimal play or a balance target. The first prestige is tuned toward ten minutes at 1×; later pacing needs further
+human playtesting. +time and 20× controls remain available for development.
 
-Every system and the ending are reachable without prestige. Research/equipment
-and completed scientific results still gate related capabilities; earned Insight
-or reset count never gates content. Later facility/radio/space prices rise more
-steeply, giving a choice between saving, expanding income and resetting for Insight.
-The next-milestone advice estimates saving time at current passive income and
-mentions optional prestige when it is available. Active help and instant analysis
-can shorten that estimate.
-
-The current reference first run opens Engineering at **331.5 simulated seconds**,
-builds the enclosure at **431.5**, opens Academy at **556.5**, adds the dome at
-**665**, expands at **986.5** and builds the mountain telescope at **1186.25**.
-The same scripted policy completes the ending without prestige in **5516 seconds**.
-With one 5-Insight reset, the rebuilt run finishes in **3512.75 seconds**, or
-**4399.25 seconds including the initial run and reset**. These are example policies,
-not optimal play or final balance. The +time and 20× utilities remain available
-for fast prototype playtests.
-
-Classroom prices triple per expansion. Teaching practice now adds **25% of base
-rewards** per level; teaching Insight factors are deliberately milder than other
-production modifiers. Classroom and science timers remain **40/60 seconds**, and
-the final synthesis remains **90 seconds**. Existing people and purchased levels
-are retained when migrating. No population cap or operating costs were added.
-
-The browser and headless scenario share a runtime-neutral deterministic core.
-Commands are `performStationAction`, `buyInvestment`, `processData` (quantity only),
-`beginPrestige`, `buyInsightUpgrade`, and
-`startNextRun`; quotes and purchase previews are read-only. There are no DOM,
-storage, timer or Node dependencies inside the core.
+The browser and scenarios share a runtime-neutral deterministic core. Commands
+include purchases, active assistance, instant Data processing, option review and
+prestige transitions. Read-only quotes/previews never mutate game state.
 
 See the [game design](eyes-on-the-universe-game-plan.md),
 [implementation plan](eyes-on-the-universe-prototype-implementation-plan.md), and
-[findings and resolution record](findings.md).
+[findings](findings.md).

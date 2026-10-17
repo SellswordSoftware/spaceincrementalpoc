@@ -77,7 +77,7 @@ export function runStationScenario(game=createGame()) {
   function nextPublication() {
     const before=game.state.science.publications;
     const started=game.state.clock.tick;
-    wait(()=>game.state.science.publications>before);
+    wait(()=>game.state.science.publications+1e-9>=before+1);
     return (game.state.clock.tick-started)*TICK_SECONDS;
   }
   const observingBeforeStudies=getSummary(game,definitions,balance).rates.D;
@@ -87,10 +87,10 @@ export function runStationScenario(game=createGame()) {
   const scientistCommand=/** @type {const} */({type:'buyInvestment',investmentId:'appoint-scientist'});
   wait(()=>quoteCommand(game,definitions,balance,scientistCommand).ok,true);
   advanceTicks(game,definitions,balance,20);
-  const scienceBefore=[...game.state.science.timers];
+  const scienceBefore=getSummary(game,definitions,balance).rates.science??0;
   send(scientistCommand);
-  const scienceAfter=[...game.state.science.timers];
-  const scientistStudySeconds=definitions.programs[0].work;
+  const scienceAfter=getSummary(game,definitions,balance).rates.science??0;
+  const scientistStudySeconds=1/scienceAfter;
   nextPublication(); buy('observing-grant');
   const fundingAfterGrants=getSummary(game,definitions,balance).rates.F??0;
   return {game,report:{milestones,classroomBefore,classroomAfter,scienceBefore,scienceAfter,firstStudySeconds,scientistStudySeconds,fundingBeforeGrants,fundingAfterGrants,observingBeforeStudies,publications:game.state.science.publications,grants:game.state.purchases['observing-grant'],instantKnowledge,processingRate,processingRateAfter,beforeJupiter,afterJupiter,actionBefore,actionAfter,beforeTelescope,afterTelescope,

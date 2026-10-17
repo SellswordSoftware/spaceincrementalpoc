@@ -538,3 +538,52 @@ Schema 13 preserves exact P12 state. The existing single integration test now pr
 ending access with zero prestige and ordered facility milestones. Reference continuous
 completion is 5516 seconds; one-reset completion including the first run is 4399.25
 seconds (rebuilt run 3512.75). These are economic pacing observations, not final balance.
+
+
+## Implemented resource relationships revision — 2026-10-17
+
+The no-prestige playtest exposed weak late Publication/Expertise roles and mandatory
+science/finale timers. Science, commissioned missions and joint teams now produce
+continuously. Only Academy retains independent classroom timers. Synthesis completes
+on resource payment, requiring the scientific record and network integration.
+
+Publications qualify higher Funding grant tiers, facilities, missions and coordinated
+programs; they remain an unspent record. All grant tiers share one slot quota.
+Advanced calibration, orbital operations, infrared calibration and network integration
+spend Expertise, giving mentoring and researcher investments sustained value. Joint
+teams can be expanded with rising prices and permanent graduate appointments. Credits
+scale the network and pay for its ending. Overall pacing remains a later task.
+
+Unreviewed capabilities now persist as gold station icons, counts and row markers.
+Review/focus/click acknowledges an option without spending; affordability changes
+do not retrigger it. Cross-station unlock feedback names the destination. Saves
+retain review state, and prestige clears it along with all ordinary progress.
+
+Older saves convert in-flight science phases/remainders to continuous rewards.
+Existing paid programs retain dedicated staff without reducing unassigned people;
+paid synthesis completes, and existing construction/ending ownership is preserved.
+
+
+## First prestige curve — 2026-10-17
+
+The player completed the preceding balance in twenty minutes at normal 1×.
+The old passive reference substantially overstated human play time; an attentive
+ordinary-command policy reached prestige in 236 seconds. Added a dedicated pacing
+reference with active assistance, instant analysis and early reinvestment.
+
+Retuned the founding equipment/Academy/dome costs toward the ten-minute reset
+decision, retaining fast early unlocks. First prestige recognizes the robotic dome,
+nebula frontier and observing grant. Expansion is the first economic cost step;
+mountain/radio/space prices then rise more steeply. No capability requires prestige.
+
+First reference prestige now takes 566.5 seconds and pays 6 Insight. Engineering
+heritage, Shared enthusiasm and Institutional memory let that policy rebuild in
+309.25 seconds. Engineering heritage doubles Engineering/Collaboration production;
+the base prestige award is 5. More modest grants and larger later Publication and
+resource requirements prevent the entire curve from collapsing after early growth.
+
+UI advice suggests prestige when expansion has a substantial passive saving cost,
+without a timed lock or automatic reset. Existing state migrates unchanged and
+previously awarded Insight is retained without retroactive bonuses. One timing
+check was added to the existing progression test. Human play remains necessary
+to calibrate aggressive reinvestment, later reset cadence and total duration.

@@ -1,4 +1,4 @@
-import { advanceJointScience } from './joint.js';
+import { availableInvestments, grantCount, unlockEvents } from './availability.js';
 import { getPurchaseCount, hasPrerequisite, prerequisiteName, analysisYield, scaledOutput, multiplier } from './rates.js';
 import { previewPrestige, insightPrice, concludeRun } from './prestige.js';
 import { populationSummary } from './people.js';
@@ -29,6 +29,9 @@ export function quoteCommand(game, definitions, balance, command) {
   const transition=command.type==='beginPrestige' || command.type==='buyInsightUpgrade' || command.type==='startNextRun';
   if (!transition && game.state.insight.phase==='shop') blockedReasons.push('Begin the next run before using stations');
   switch (command.type) {
+    case 'reviewOption':
+      if (!availableInvestments(game,definitions).some(item=>item.id===command.investmentId)) blockedReasons.push('Option is not available');
+      break;
     case 'beginPrestige':
       blockedReasons.push(...previewPrestige(game,definitions,balance).blockedReasons);
       break;
@@ -48,7 +51,8 @@ export function quoteCommand(game, definitions, balance, command) {
       if (!item) { blockedReasons.push('Unknown purchase'); break; }
       const count = getPurchaseCount(game,item.id);
       require(item.requires);
-      if (item.id==='observing-grant' && count>=game.state.science.publications) blockedReasons.push('Publish another study to open another grant slot');
+      if (game.state.science.publications+1e-9<(item.publications??0)) blockedReasons.push(`Requires ${item.publications} cumulative Publications (not spent)`);
+      if (item.grant && grantCount(game,definitions)>=Math.floor(game.state.science.publications+1e-9)) blockedReasons.push('Publish another study to open another grant slot');
       if (count >= item.maxLevel) blockedReasons.push('Fully purchased');
       for (const [key,base] of Object.entries(item.cost)) {
         const precision=key==='X'?100:1;
@@ -89,46 +93,28 @@ export function currencyName(definitions, key) {
 export function advanceProjects(game,definitions,balance,seconds) {
   /** @type {import('./types.js').GameEvent[]} */
   const events=[];
-  for (const kind of /** @type {const} */(['academy','science'])) {
-    const station=game.state[kind];
-    const duration=kind==='academy'?balance.course.seconds:definitions.programs[0].work;
-    let completed=0;
-    for (let i=0;i<station.timers.length;i++) {
-      const elapsed=station.timers[i]+seconds;
-      completed+=Math.floor((elapsed+1e-9)/duration);
-      station.timers[i]=elapsed%duration;
-    }
-    if (!completed) continue;
-    const reward=completed*multiplier(game,definitions,kind==='academy'?'teaching':'science')*(kind==='science'?definitions.programs[0].publications:1)+station.remainder;
+  const station=game.state.academy;
+  let completed=0;
+  for (let i=0;i<station.timers.length;i++) {
+    const elapsed=station.timers[i]+seconds;
+    completed+=Math.floor((elapsed+1e-9)/balance.course.seconds);
+    station.timers[i]=elapsed%balance.course.seconds;
+  }
+  if (completed) {
+    const reward=completed*multiplier(game,definitions,'teaching')+station.remainder;
     const whole=Math.floor(reward+1e-9);
     station.remainder=Math.max(0,reward-whole);
-    if (kind==='academy') game.state.population.total+=whole;
-    else game.state.science.publications+=whole;
-    events.push({tick:game.state.clock.tick,type:kind==='academy'?'graduate':'publication',id:kind,
-      detail:kind==='academy'?`${whole} graduate(s) ready for permanent appointments.`:`Published ${whole} result(s); grant capacity increased.`});
+    game.state.population.total+=whole;
+    events.push({tick:game.state.clock.tick,type:'graduate',id:'academy',detail:`${whole} graduate(s) ready for permanent appointments.`});
   }
-  for (const definition of definitions.missions) {
-    const mission=game.state.missions[definition.id];
-    if (!mission) continue;
-    const elapsed=mission.progress+seconds;
-    const completed=Math.floor((elapsed+1e-9)/definition.seconds);
-    mission.progress=elapsed%definition.seconds;
-    if (!completed) continue;
-    mission.cycles+=completed;
-    const reward=mission.remainder+completed*definition.publications*multiplier(game,definitions,'science');
-    const whole=Math.floor(reward+1e-9);
-    mission.remainder=Math.max(0,reward-whole);
-    game.state.science.publications+=whole;
-    events.push({tick:game.state.clock.tick,type:'publication',id:definition.id,detail:`${definition.name} completed: ${whole} Publication(s). The next cycle is underway.`});
-  }
-  events.push(...advanceJointScience(game,definitions,seconds));
   return events;
 }
 
 /** @param {GameState} game @param {Definitions} definitions @param {import('./types.js').Output} output @param {number} factor */
 export function produce(game, definitions, output, factor) {
   for (const [key,amount] of Object.entries(output)) {
-    if (key === 'training' || key === 'science' || key === 'C') continue;
+    if (key === 'training') continue;
+    if (key === 'science') { game.state.science.publications+=amount*factor; continue; }
     game.state.resources[/** @type {import('./types.js').StockId} */(key)] += amount*factor;
   }
 }
@@ -139,6 +125,7 @@ export function produce(game, definitions, output, factor) {
 export function dispatch(game, definitions, balance, command) {
   const quote = quoteCommand(game,definitions,balance,command);
   if (!quote.ok) return {...quote,events:[]};
+  const before=availableInvestments(game,definitions).map(item=>item.id);
   for (const [key,cost] of Object.entries(quote.costs)) {
     if (key==='Insight') game.state.insight.points-=cost;
     else if (key !== 'N') {
@@ -148,7 +135,9 @@ export function dispatch(game, definitions, balance, command) {
   }
   /** @type {import('./types.js').GameEvent[]} */
   const events = [];
-  if (command.type==='beginPrestige') {
+  if (command.type==='reviewOption') {
+    if (!game.state.reviewedOptions.includes(command.investmentId)) game.state.reviewedOptions.push(command.investmentId);
+  } else if (command.type==='beginPrestige') {
     const award=concludeRun(game,definitions,balance);
     events.push({tick:0,type:'prestige',id:'insight',detail:`Run concluded. Earned ${award} Insight. All ordinary progress has reset.`});
   } else if (command.type==='buyInsightUpgrade') {
@@ -160,12 +149,11 @@ export function dispatch(game, definitions, balance, command) {
   } else if (command.type === 'buyInvestment') {
     game.state.purchases[command.investmentId] = getPurchaseCount(game,command.investmentId)+1;
     if (command.investmentId==='academy' || command.investmentId==='appoint-teacher') game.state.academy.timers.push(0);
-    if (command.investmentId==='photometry' || command.investmentId==='appoint-scientist') game.state.science.timers.push(0);
-    const program=definitions.jointPrograms.find(item=>item.investmentId===command.investmentId);
-    if (program) game.state.joint.programs[program.id]={progress:0,cycles:0,remainder:0,publicationRemainder:0};
-    if (command.investmentId===definitions.finale.investmentId) game.state.joint.finaleProgress=0;
-    const mission=definitions.missions.find(item=>item.commissionId===command.investmentId);
-    if (mission) game.state.missions[mission.id]={progress:0,cycles:0,remainder:0};
+    if (!game.state.reviewedOptions.includes(command.investmentId)) game.state.reviewedOptions.push(command.investmentId);
+    if (command.investmentId===definitions.finale.investmentId) {
+      game.state.joint.completedAtTick=game.state.clock.tick;
+      events.push({tick:game.state.clock.tick,type:'completion',id:command.investmentId,detail:'Eyes on the Universe complete. Your connected network has completed its synthesis.'});
+    }
     const item = definitions.investments.find(item => item.id === command.investmentId);
     events.push({tick:game.state.clock.tick,type:'purchase',id:command.investmentId,detail:item?.name ?? command.investmentId});
   } else if (command.type === 'processData') game.state.resources.K += command.quantity*analysisYield(game,definitions,balance);
@@ -181,5 +169,6 @@ export function dispatch(game, definitions, balance, command) {
       events.push({tick:game.state.clock.tick,type:'record',id:target.id,detail:target.claim});
     }
   }
+  if (command.type!=='reviewOption' && command.type!=='beginPrestige') events.push(...unlockEvents(before,game,definitions,command.type==='buyInvestment'?definitions.investments.find(item=>item.id===command.investmentId)?.name:undefined));
   return {...quote,events};
 }
