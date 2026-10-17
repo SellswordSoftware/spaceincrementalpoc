@@ -1,7 +1,7 @@
 // Permanent capacity purchases; timed producers have no recurring costs.
 /** @type {import('../core/types.js').Balance} */
 export const balance = {
-  id: 'pacing-v1',
+  id: 'network-investment-v1',
   startingStocks: { D: 0, F: 0, K: 0, I: 0, X: 0, E: 0, C: 0 },
   course: { seconds: 40 },
   knowledgePerData: 0.2,

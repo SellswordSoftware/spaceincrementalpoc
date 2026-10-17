@@ -10,6 +10,11 @@ export function hasPrerequisite(game,id) {
 }
 /** @param {Definitions} definitions @param {string} id */
 export function prerequisiteName(definitions,id) { return definitions.investments.find(item=>item.id===id)?.name ?? (id==='first-graduate'?'first graduate':id==='first-publication'?'first Publication':id); }
+/** Partnerships improve scientific grants without also multiplying fundraiser appointments.
+ * @param {GameState} game @param {Definitions} definitions */
+export function grantMultiplier(game,definitions) {
+  return 1+definitions.investments.reduce((sum,item)=>sum+(item.grantBonus??0)*getPurchaseCount(game,item.id),0);
+}
 /** Permanent Insight factors multiply the ordinary run's local bonuses.
  * @param {GameState} game @param {Definitions} definitions @param {import('./types.js').StatId} stat */
 export function insightMultiplier(game,definitions,stat) {
@@ -53,7 +58,7 @@ export function baseProduction(game,definitions,balance) {
   if (hasPrerequisite(game,'academy')) output.training=(1+getPurchaseCount(game,'appoint-teacher'))/balance.course.seconds;
   for (const item of definitions.investments) for (const [key,value] of Object.entries(item.output)) {
     const currency=/** @type {keyof import('./types.js').Output} */(key);
-    output[currency]=(output[currency]??0)+value*getPurchaseCount(game,item.id);
+    output[currency]=(output[currency]??0)+value*getPurchaseCount(game,item.id)*(item.grant && currency==='F'?grantMultiplier(game,definitions):1);
   }
   return output;
 }

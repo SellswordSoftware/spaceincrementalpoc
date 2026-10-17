@@ -10,6 +10,7 @@ export function runSynthesisScenario(game) {
   /** @type {Record<string,number>} */
   const milestones={};
   const buy=investor(game,milestones);
+  // Joint science may already have opened the infrared funding route.
   buy('joint-science'); buy('collaboration-practice'); buy('appoint-coordinator');
   buy('joint-changing-sky');
   const creditsBefore=game.state.resources.C;

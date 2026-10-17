@@ -17,6 +17,7 @@ export function advanceTicks(game, definitions, balance, count) {
   for (let index=0;index<count;index++) {
     produce(game,definitions,rates,TICK_SECONDS);
     game.state.clock.tick++;
+    game.state.clock.totalTicks++;
     events.push(...advanceProjects(game,definitions,balance,TICK_SECONDS));
   }
   events.push(...unlockEvents(before,game,definitions));

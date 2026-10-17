@@ -1,6 +1,6 @@
 import { availableInvestments, grantCount, unlockEvents } from './availability.js';
 import { getPurchaseCount, hasPrerequisite, prerequisiteName, analysisYield, scaledOutput, multiplier } from './rates.js';
-import { previewPrestige, insightPrice, concludeRun } from './prestige.js';
+import { previewPrestige, insightPrice, concludeRun, trackPrestigeEligibility } from './prestige.js';
 import { populationSummary } from './people.js';
 
 /** @typedef {import('./types.js').GameState} GameState */
@@ -169,6 +169,7 @@ export function dispatch(game, definitions, balance, command) {
       events.push({tick:game.state.clock.tick,type:'record',id:target.id,detail:target.claim});
     }
   }
+  trackPrestigeEligibility(game,balance);
   if (command.type!=='reviewOption' && command.type!=='beginPrestige') events.push(...unlockEvents(before,game,definitions,command.type==='buyInvestment'?definitions.investments.find(item=>item.id===command.investmentId)?.name:undefined));
   return {...quote,events};
 }

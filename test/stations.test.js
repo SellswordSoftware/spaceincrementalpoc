@@ -9,10 +9,14 @@ import { runPacingComparison } from '../scenarios/pacing.js';
 import { newOptions } from '../src/core/availability.js';
 
 test('continuous science connects the first-run network to synthesis, then fully resets for Insight',()=>{
-  const {report:pacing}=runPacingComparison();
+  const {report:pacing,game:rebuilt}=runPacingComparison();
+  assert.equal(rebuilt.state.clock.totalTicks*.25,pacing.first.seconds+pacing.rebuilt.seconds);
+  assert.equal(deserializeGame(serializeGame(rebuilt)).state.clock.totalTicks,rebuilt.state.clock.totalTicks);
   assert.ok(pacing.first.seconds>=480 && pacing.first.seconds<=720);
   assert.equal(pacing.first.encouraged,true);
   assert.ok(pacing.rebuilt.seconds<pacing.first.seconds*.7);
+  assert.equal(rebuilt.state.clock.completedRuns[0].eligibleAtTick,pacing.first.seconds/.25);
+  assert.equal(rebuilt.state.clock.completedRuns[0].endedAtTick,pacing.first.seconds/.25);
   const {game,report}=runStationScenario();
   assert.equal(report.firstCourseSeconds,40);
   assert.deepEqual(report.classroomAfter,[...report.classroomBefore,0]);
@@ -35,9 +39,14 @@ test('continuous science connects the first-run network to synthesis, then fully
 
   const {report:engineering}=runEngineeringScenario(game);
   assert.ok(engineering.afterScience>engineering.beforeScience);
+  assert.ok((engineering.grantCosts.D??0)>0 && (engineering.grantCosts.K??0)>0 && (engineering.grantCosts.I??0)>0);
+  assert.equal(engineering.grantCosts.F,undefined);
+  assert.ok(Math.abs(engineering.grantAfter-engineering.grantBefore*1.5)<1e-8);
+  assert.equal(engineering.fundraiserAfter,engineering.fundraiserBefore);
   assert.ok(game.state.purchases['advanced-calibration']);
   assert.ok(game.state.purchases['research-grant']);
   const {report:horizons}=runHorizonsScenario(game);
+  assert.ok(horizons.afterFabrication>horizons.beforeFabrication);
   assert.ok(horizons.missions.every(mission=>mission.commissioned && mission.rate>0));
   for (const id of ['orbital-operations','infrared-calibration','flagship-grant']) assert.ok(game.state.purchases[id]);
   const {report:synthesis}=runSynthesisScenario(game);
@@ -53,7 +62,14 @@ test('continuous science connects the first-run network to synthesis, then fully
   assert.equal(game.state.clock.campaignIndex,1);
   assert.deepEqual(deserializeGame(serializeGame(game)),game);
 
+  const totalBeforeReset=game.state.clock.totalTicks;
   assert.equal(dispatch(game,definitions,balance,{type:'beginPrestige'}).ok,true);
+  assert.equal(game.state.clock.totalTicks,totalBeforeReset);
+  assert.equal(game.state.clock.tick,0);
+  const recordedRun=game.state.clock.completedRuns.at(-1);
+  assert.ok(recordedRun && recordedRun.eligibleAtTick!==null && recordedRun.eligibleAtTick<recordedRun.endedAtTick);
+  advanceTicks(game,definitions,balance,40);
+  assert.equal(game.state.clock.totalTicks,totalBeforeReset); // The Insight shop is paused.
   assert.deepEqual(game.state.resources,balance.startingStocks);
   assert.deepEqual(game.state.purchases,{});
   assert.deepEqual(game.state.academy,{timers:[],remainder:0});

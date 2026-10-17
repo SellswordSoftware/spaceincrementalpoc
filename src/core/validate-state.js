@@ -6,7 +6,9 @@ import { populationSummary } from './people.js';
 
 const target = choice(['moon','jupiter','saturn','star-clusters','nebulae','galaxies','galaxy-clusters','radio-sources','transit-targets','infrared-fields','deep-field']);
 const stocks = object({D:nonnegative,F:nonnegative,K:nonnegative,I:nonnegative,X:nonnegative,E:nonnegative,C:nonnegative});
-const state = object({clock:object({tick:integer,campaignIndex:integer}),resources:stocks,insight:object({points:integer,totalEarned:integer,upgrades:dictionary(id,integer),phase:choice(['playing','shop']),lastAward:integer}),purchases:dictionary(id,integer),
+/** @param {unknown} value @param {string} path */
+const nullableTick = (value,path)=>{if(value!==null)integer(value,path);};
+const state = object({clock:object({tick:integer,totalTicks:integer,totalIsPartial:boolean,campaignIndex:integer,prestigeEligibleAtTick:nullableTick,eligibilityKnown:boolean,completedRuns:array(object({run:integer,eligibleAtTick:nullableTick,endedAtTick:integer,insight:integer}))}),resources:stocks,insight:object({points:integer,totalEarned:integer,upgrades:dictionary(id,integer),phase:choice(['playing','shop']),lastAward:integer}),purchases:dictionary(id,integer),
   population:object({total:integer}),academy:object({timers:array(nonnegative),remainder:nonnegative}),
   science:object({publications:nonnegative}),reviewedOptions:array(id),
   joint:object({completedAtTick:(value,path)=>{if(value!==null)integer(value,path);}}),
@@ -30,6 +32,8 @@ export function validateGame(value, definitions, balance) {
   }
   requireValid(game.state.insight.points+insightSpent===game.state.insight.totalEarned,'insight','earned points must match spent and available Insight');
   requireValid(game.state.insight.lastAward<=game.state.insight.totalEarned,'insight','last award exceeds total earned');
+  requireValid(game.state.clock.prestigeEligibleAtTick===null || game.state.clock.prestigeEligibleAtTick<=game.state.clock.tick,'clock','eligibility cannot be in the future');
+  requireValid(game.state.clock.totalTicks>=game.state.clock.tick,'clock','total time must include the current run');
   requireValid(game.state.clock.campaignIndex>=1,'run','run number must be positive');
   if (game.state.insight.phase==='shop') {
     requireValid(Object.keys(game.state.purchases).length===0 && game.state.population.total===0 && game.state.academy.timers.length===0

@@ -9,7 +9,7 @@
  * @typedef {{id:string,name:string,kind:string,reset:string,spendable:boolean,revealAt:string}} ResourceDefinition
  * @typedef {{id:TargetId,name:string,investmentId:string|null,yield:number,claim:string}} TargetDefinition
  * @typedef {{id:StationId,name:string,subtitle:string,output:string,requires:string[],reveal:string[],use:string}} StationDefinition
- * @typedef {{id:string,name:string,station:StationId,kind:'unlock'|'producer'|'upgrade'|'appointment'|'discovery',requires:string[],cost:Costs,growth:number,maxLevel:number,output:Output,publications?:number,grant?:boolean,boost?:{stat:StatId,bonus:number},effect:string}} Investment
+ * @typedef {{id:string,name:string,station:StationId,kind:'unlock'|'producer'|'upgrade'|'appointment'|'discovery',requires:string[],cost:Costs,growth:number,maxLevel:number,output:Output,publications?:number,grant?:boolean,grantBonus?:number,boost?:{stat:StatId,bonus:number},effect:string}} Investment
  * @typedef {{id:string,name:string,station:StationId,requires:string[],output:Output}} StationAction
  * @typedef {{id:string,name:string,requires:string[],publicationsPerSecond:number,description:string}} ProgramDefinition
  * @typedef {{id:string,name:string,stats:StatId[],factor:number,factors?:Partial<Record<StatId,number>>,cost:number,growth:number,maxLevel:number,description:string}} InsightUpgrade
@@ -21,7 +21,8 @@
  * @typedef {{investmentId:string,name:string,description:string}} FinaleDefinition
  * @typedef {{contentVersion:string,resources:ResourceDefinition[],stations:StationDefinition[],targets:TargetDefinition[],facilities:FacilityDefinition[],missions:MissionDefinition[],jointPrograms:JointProgramDefinition[],finale:FinaleDefinition,investments:Investment[],actions:StationAction[],programs:ProgramDefinition[],insightUpgrades:InsightUpgrade[]}} Definitions
  * @typedef {{id:string,startingStocks:Record<StockId,number>,course:{seconds:number},knowledgePerData:number,actionCooldownTicks:number,prestige:{requires:string[],baseAward:number}}} Balance
- * @typedef {{clock:{tick:number,campaignIndex:number},insight:InsightState,resources:Record<StockId,number>,purchases:Record<string,number>,population:{total:number},academy:{timers:number[],remainder:number},science:{publications:number},reviewedOptions:string[],joint:JointState,journal:TargetId[],nextActionTick:number,modified:boolean}} State
+ * @typedef {{run:number,eligibleAtTick:number|null,endedAtTick:number,insight:number}} RunRecord
+ * @typedef {{clock:{tick:number,totalTicks:number,totalIsPartial:boolean,campaignIndex:number,prestigeEligibleAtTick:number|null,eligibilityKnown:boolean,completedRuns:RunRecord[]},insight:InsightState,resources:Record<StockId,number>,purchases:Record<string,number>,population:{total:number},academy:{timers:number[],remainder:number},science:{publications:number},reviewedOptions:string[],joint:JointState,journal:TargetId[],nextActionTick:number,modified:boolean}} State
  * @typedef {{schemaVersion:number,contentVersion:string,balanceId:string,balanceHash:string,simulationVersion:string,state:State}} GameState
  * @typedef {{type:'reviewOption',investmentId:string}|{type:'buyInvestment',investmentId:string}|{type:'performStationAction',actionId:string}|{type:'processData',quantity:number}|{type:'beginPrestige'}|{type:'buyInsightUpgrade',upgradeId:string}|{type:'startNextRun'}} Command
  * @typedef {{ok:boolean,costs:Costs,blockedReasons:string[]}} CommandQuote

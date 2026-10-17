@@ -15,6 +15,14 @@ function q(scope,selector) {
 }
 /** @param {number} value */
 const fmt = value => value.toLocaleString(undefined,{maximumFractionDigits:2});
+/** @param {number} seconds */
+function formatDuration(seconds) {
+  const whole=Math.floor(seconds);
+  const hours=Math.floor(whole/3600);
+  const minutes=String(Math.floor(whole/60)%60).padStart(2,'0');
+  const remainder=String(whole%60).padStart(2,'0');
+  return `${hours?String(hours).padStart(2,'0')+':':''}${minutes}:${remainder}`;
+}
 /** @param {import('../core/types.js').Costs} costs */
 const price = costs => Object.entries(costs).map(([key,value]) => `${fmt(value)} ${key==='N'&&value===1?'unassigned person':currencyName(definitions,key)}`).join(' + ');
 /** @param {string} text @param {boolean} [error] */
@@ -73,7 +81,7 @@ function send(command,quiet=false) {
   const result=dispatch(game,definitions,balance,command);
   if (!result.ok) { if (!quiet) message(result.blockedReasons.join(' · '),true); return; }
   if (command.type==='beginPrestige') {
-    stopHold(); running=false; accumulator=0; reviewingPrestige=false; recentEvents=[];
+    closeCompletedPurchases(); stopHold(); running=false; accumulator=0; reviewingPrestige=false; recentEvents=[];
   } else if (command.type==='startNextRun') {
     stopHold(); running=true; accumulator=0; reviewingPrestige=false;
   }
@@ -95,6 +103,9 @@ function advance(ticks) {
     send({type:'performStationAction',actionId:heldAction},true);
     record(advanceTicks(game,definitions,balance,1).events);
   }
+}
+function closeCompletedPurchases() {
+  document.querySelectorAll('.completed-purchases, #completed-insight-upgrades').forEach(node=>{ /** @type {HTMLDetailsElement} */(node).open=false; });
 }
 function stopHold() {
   heldAction=null;
@@ -206,6 +217,11 @@ for (const station of definitions.stations) {
   }
   const purchases=q(section,'.station-purchases');
   const label=document.createElement('p'); label.className='section-label'; label.textContent='Invest in this station'; purchases?.append(label);
+  const activePurchases=document.createElement('div'); activePurchases.className='active-purchases';
+  const completedPurchases=document.createElement('details'); completedPurchases.className='completed-purchases'; completedPurchases.hidden=true;
+  const completedSummary=document.createElement('summary');
+  const completedList=document.createElement('div'); completedList.className='completed-list';
+  completedPurchases.append(completedSummary,completedList); purchases.append(activePurchases,completedPurchases);
   for (const item of definitions.investments.filter(item => item.station===station.id)) {
     const row=document.createElement('div'); row.className='purchase'; row.dataset.investment=item.id;
     const head=document.createElement('div'); head.className='purchase-head';
@@ -221,7 +237,7 @@ for (const station of definitions.stations) {
     const marker=document.createElement('span'); marker.className='new-option'; marker.textContent='New'; marker.hidden=true; head.prepend(marker);
     row.addEventListener('focusin',()=>reviewOption(item.id));
     row.addEventListener('click',()=>reviewOption(item.id));
-    row.append(head,effect,gain,button,reason); purchases?.append(row);
+    row.append(head,effect,gain,button,reason); activePurchases.append(row);
   }
   el('stations').append(section);
 }
@@ -265,6 +281,9 @@ function renderPrestige() {
   el('insight-modifiers').textContent=`${insight.points} unspent Insight · permanent modifiers: ${Object.entries(statNames).map(([stat,name])=>`${name} ×${fmt(insightMultiplier(game,definitions,/** @type {import('../core/types.js').StatId} */(stat)))}`).join(' · ')}`;
   el('prestige-reward').textContent=preview.eligible?`Earn ${preview.award} Insight`:`Prestige reward: ${balance.prestige.baseAward} or more Insight`;
   el('prestige-requirements').textContent=preview.eligible?'Requirements met: nebula frontier, robotic dome and at least one observing grant.':preview.blockedReasons.join(' · ');
+  const eligibleTick=game.state.clock.prestigeEligibleAtTick;
+  el('prestige-eligibility-time').hidden=!preview.eligible;
+  el('prestige-eligibility-time').textContent=eligibleTick===null?'The eligibility time for this imported run was not recorded.':`Prestige available since ${formatDuration(eligibleTick*TICK_SECONDS)} in this run. Reset now at ${formatDuration(preview.seconds)}.`;
   el('prestige-payout').textContent=`${balance.prestige.baseAward} base Insight, with diminishing rewards for additional Publications: 2 Publications → ${balance.prestige.baseAward+1}, 5 → ${balance.prestige.baseAward+2}, 10 → ${balance.prestige.baseAward+3}. Your next reward increase is at ${preview.nextPublicationThreshold} Publications.`;
   const loss=preview.losses;
   el('prestige-losses').textContent=`You will lose: ${price(Object.fromEntries(Object.entries(loss.resources).filter(([key,value])=>value>0 || ['D','F','K','I','X'].includes(key))))}; ${loss.purchases} purchased levels, including ${loss.producers} producer purchases; ${loss.stations} station unlocks; ${loss.telescopes} telescopes; ${loss.people} trained people; ${loss.discoveries} journal discoveries; ${loss.publications} Publications and ${loss.grants} grants. Current run time: ${fmt(preview.seconds/60)} minutes.`;
@@ -276,6 +295,17 @@ function renderPrestige() {
   el('start-next-run').textContent=`Begin run ${game.state.clock.campaignIndex}`;
   for (const upgrade of definitions.insightUpgrades) {
     const level=insight.upgrades[upgrade.id]??0;
+    const card=q(document,`[data-insight-upgrade="${upgrade.id}"]`);
+    const completed=el('completed-insight-upgrades');
+    const container=level>=upgrade.maxLevel?el('completed-insight-list'):el('insight-upgrades');
+    if (card.parentElement!==container) {
+      const hadFocus=card.contains(document.activeElement);
+      container.append(card);
+      if (level>=upgrade.maxLevel) {
+        completed.hidden=false;
+        if (hadFocus && !/** @type {HTMLDetailsElement} */(completed).open) q(completed,'summary').focus({preventScroll:true});
+      }
+    }
     const quote=quoteCommand(game,definitions,balance,{type:'buyInsightUpgrade',upgradeId:upgrade.id});
     const button=/** @type {HTMLButtonElement} */(q(document,`[data-buy-insight="${upgrade.id}"]`));
     button.disabled=awaitingNewRun || !quote.ok;
@@ -284,12 +314,26 @@ function renderPrestige() {
       const current=insightMultiplier(game,definitions,stat);return `${statNames[stat]} ×${fmt(current)} → ×${fmt(current*(upgrade.factors?.[stat]??upgrade.factor))}`;
     }).join(' · ')}${shop && !quote.ok && level<upgrade.maxLevel?' · '+quote.blockedReasons.join(' · '):''}`;
   }
+  const completedCount=el('completed-insight-list').children.length;
+  el('completed-insight-upgrades').hidden=completedCount===0;
+  q(el('completed-insight-upgrades'),'summary').textContent=`Fully upgraded modifiers (${completedCount})`;
 }
 
 function render() {
   const summary=getSummary(game,definitions,balance);
-  const minutes=Math.floor(summary.seconds/60);
-  el('clock').textContent=`${String(minutes).padStart(2,'0')}:${String(Math.floor(summary.seconds%60)).padStart(2,'0')}`;
+  el('clock').textContent=`Run ${formatDuration(summary.seconds)}`;
+  el('total-clock').textContent=`${game.state.clock.totalIsPartial?'Total tracked':'Total'} ${formatDuration(summary.totalSeconds)}`;
+  el('total-clock').title=game.state.clock.totalIsPartial
+    ?'Earlier run times were not saved. Includes the imported current run and all time tracked since this update.'
+    :'Total simulated playtime across all runs. Pauses and the Insight shop do not add time; speed controls apply.';
+  const history=game.state.clock.completedRuns;
+  el('run-history').hidden=history.length===0;
+  el('run-history-summary').textContent=`Previous runs (${history.length} recorded)`;
+  el('run-history-list').replaceChildren(...history.map(run=>{
+    const row=document.createElement('li');
+    row.textContent=`Run ${run.run}: ${run.eligibleAtTick===null?'eligibility time unavailable':'prestige available at '+formatDuration(run.eligibleAtTick*TICK_SECONDS)} · reset at ${formatDuration(run.endedAtTick*TICK_SECONDS)} · +${run.insight} Insight.`;
+    return row;
+  }));
   el('runtime-status').textContent=awaitingNewRun?'Previous save protected':game.state.insight.phase==='shop'?'Between runs · Insight shop':running?`Live · ${speed}×`:'Paused';
   el('pause').textContent=running?'Pause':'Run';
   /** @type {Array<[string,number,string]>} */
@@ -321,7 +365,7 @@ function render() {
       if (needed>0) savingSeconds=Math.max(savingSeconds,income>0?needed/income:Infinity);
     }
     if (savingSeconds>=60 && Number.isFinite(savingSeconds)) {
-      el('suggestion').textContent=`At current passive income, about ${fmt(savingSeconds/60)} min to afford ${next.name}. Expand production or keep saving.${summary.prestige.eligible?` Prestige is also available (+${summary.prestige.award} Insight). The next milestone remains reachable without resetting.`:''}`;
+      el('suggestion').textContent=`At current passive income, about ${fmt(savingSeconds/60)} min to afford ${next.name}. Expand production or keep saving.${summary.prestige.eligible?` Prestige is also available (+${summary.prestige.award} Insight). The next milestone remains reachable without resetting.`:''} ${summary.guidance.suggestion}`;
     }
   }
 
@@ -364,10 +408,19 @@ function render() {
     const count=getPurchaseCount(game,item.id); const complete=count>=item.maxLevel;
     row.hidden=!meets(item.requires) && count===0;
     row.classList.toggle('complete',complete);
+    const station=el(`station-${item.station}`);
+    const completed=q(station,'.completed-purchases');
+    const container=q(station,complete?'.completed-list':'.active-purchases');
+    if (row.parentElement!==container) {
+      if (complete) completed.hidden=false;
+      const hadFocus=row.contains(document.activeElement);
+      container.append(row);
+      if (hadFocus && complete && !/** @type {HTMLDetailsElement} */(completed).open) q(completed,'summary').focus({preventScroll:true});
+    }
     const fresh=summary.newOptions.some(option=>option.id===item.id);
     row.classList.toggle('is-new',fresh); row.tabIndex=0;
     q(row,'.new-option').hidden=!fresh;
-    q(row,'.owned').textContent=complete?(item.kind==='discovery'?'✓ Researched':'✓ Installed'):count?`${count} ${item.kind==='appointment'?'appointed':'owned'}`:'';
+    q(row,'.owned').textContent=complete?(item.maxLevel>1?`✓ ${count}/${item.maxLevel} · Complete`:item.kind==='discovery'?'✓ Researched':'✓ Installed'):count?`${count} ${item.kind==='appointment'?'appointed':'owned'}`:'';
     const quote=quoteCommand(game,definitions,balance,{type:'buyInvestment',investmentId:item.id});
     const button=/** @type {HTMLButtonElement} */(q(row,'button'));
     button.disabled=awaitingNewRun || !quote.ok;
@@ -379,6 +432,13 @@ function render() {
     if (gain.activeGain>1e-9) parts.push(`${gain.actionName}: +${fmt(gain.activeGain)} more/action`);
     if (gain.analysisGain>1e-9) parts.push(`Analyze 10: +${fmt(gain.analysisGain)} more Knowledge`);
     q(row,'.purchase-gain').textContent=parts.length?`This purchase: ${parts.join(' · ')}`:'';
+  }
+  for (const station of definitions.stations) {
+    const section=el(`station-${station.id}`);
+    const completed=q(section,'.completed-purchases');
+    const count=q(completed,'.completed-list').children.length;
+    completed.hidden=count===0;
+    q(completed,'summary').textContent=`Installed / fully upgraded (${count})`;
   }
   el('heading-observatory').textContent=summary.observing.current.name;
   renderObservatory(el('observatory-network'),summary.observing);
@@ -433,10 +493,11 @@ function render() {
   el('synthesis-requirements').textContent=`${completed} / ${summary.joint.programs.length} joint programs established · ${fmt(game.state.science.publications)} / ${fmt(definitions.investments.find(item=>item.id===definitions.finale.investmentId)?.publications??0)} Publications · ${hasPrerequisite(game,'network-integration')?'network integration complete':'develop network integration in Research'}.`;
   el('synthesis-status').textContent=summary.joint.completedAtTick!==null?'Synthesis complete. Your observatories continue producing.':'Build all three programs and integrate the network. Accumulate the required resources, then complete synthesis with one purchase.';
   el('ending-receipt').hidden=summary.joint.completedAtTick===null;
-  el('ending-time').textContent=summary.joint.completedAtTick===null?'':`Completed in run ${game.state.clock.campaignIndex} after ${fmt(summary.joint.completedAtTick*TICK_SECONDS/60)} simulated minutes.`;
+  const completionTick=summary.joint.completedAtTick;
+  el('ending-time').textContent=completionTick===null?'':`Completed in run ${game.state.clock.campaignIndex} · run time ${formatDuration(completionTick*TICK_SECONDS)} · ${game.state.clock.totalIsPartial?'total tracked':'total playtime'} ${formatDuration((game.state.clock.totalTicks-game.state.clock.tick+completionTick)*TICK_SECONDS)}.${game.state.clock.totalIsPartial?' Earlier run times were not saved.':''}`;
   el('continue-observing').hidden=running;
   el('grant-status').hidden=!hasPrerequisite(game,'first-publication');
-  el('grant-status').textContent=`${summary.grants.active} / ${summary.grants.capacity} Publication-backed grants · ${summary.grants.capacity-summary.grants.active} available slots. Publications are not spent; grants have no upkeep.`;
+  el('grant-status').textContent=`Grants: +${fmt(summary.grants.rate)} Funding/s of +${fmt(summary.rates.F??0)}/s total · grant-specific bonus ×${fmt(summary.grants.bonus)}. ${summary.grants.active} / ${summary.grants.capacity} slots used. Publications are not spent; grants have no upkeep.`;
   el('journal').replaceChildren(...(game.state.journal.length?game.state.journal.map(id => {
     const node=document.createElement('li'); node.textContent=definitions.targets.find(target => target.id===id)?.claim??id; return node;
   }):[Object.assign(document.createElement('li'),{textContent:'New research discoveries will appear here.'})]));
@@ -462,7 +523,7 @@ el('start-next-run').addEventListener('click',()=>{send({type:'startNextRun'});e
 el('export').addEventListener('click',() => { if (awaitingNewRun) downloadSave(oldSave,'eyes-on-the-universe-previous-save.json'); else exportGame(game); });
 el('export-old').addEventListener('click',() => downloadSave(oldSave,'eyes-on-the-universe-previous-save.json'));
 function startNew() {
-  stopHold(); game=createGame(); reviewingPrestige=false; running=true; awaitingNewRun=false; saveEnabled=true; recentEvents=[]; accumulator=0;
+  closeCompletedPurchases(); stopHold(); game=createGame(); reviewingPrestige=false; running=true; awaitingNewRun=false; saveEnabled=true; recentEvents=[]; accumulator=0;
   el('old-save').hidden=true; message('A fresh start. Click or hold Observe, then establish an observing routine.'); persist(); render();
 }
 el('start-new').addEventListener('click',() => {
@@ -475,7 +536,7 @@ el('import').addEventListener('change',async () => {
   try {
     const candidate=deserializeGame(await file.text());
     if (awaitingNewRun && oldSave) backupPreviousSave(oldSave);
-    stopHold(); game=candidate; reviewingPrestige=false; running=false; accumulator=0; saveEnabled=true; awaitingNewRun=false; recentEvents=[]; el('old-save').hidden=true;
+    closeCompletedPurchases(); stopHold(); game=candidate; reviewingPrestige=false; running=false; accumulator=0; saveEnabled=true; awaitingNewRun=false; recentEvents=[]; el('old-save').hidden=true;
     message(game.state.insight.phase==='shop'?'Insight shop imported. Choose modifiers, then begin the next run.':'Station save imported. Press Run to continue.'); persist(); render();
   } catch (error) { message(`Import left your current run unchanged: ${error instanceof Error?error.message:error}`,true); }
   input.value='';
