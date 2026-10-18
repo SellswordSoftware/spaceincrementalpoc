@@ -1,3 +1,4 @@
+import { PlaytestLog } from '../core/playtest-log.js';
 import { buildJointScience } from './joint-science.js';
 import { buildObservatory, renderObservatory } from './observatory.js';
 import { advanceTicks, balance, createGame, definitions, deserializeGame, dispatch, getSummary, quoteCommand, TICK_SECONDS } from '../core/index.js';
@@ -58,8 +59,32 @@ try {
   message(awaitingNewRun ? 'Export your previous save or start the new station economy above.' : 'Local storage is unavailable. You can still play and export your run.',true);
 }
 
-/** @param {import('../core/types.js').GameEvent[]} events */
-function record(events) {
+const LOG_KEY='eyes-on-the-universe.playtest-log.v1';
+let diagnostics=new PlaytestLog(definitions,balance);
+let logStorageError='';
+try {
+  const raw=localStorage.getItem(LOG_KEY);
+  if (raw) {
+    const saved=JSON.parse(raw);
+    if (saved.format!==1 || !Array.isArray(saved.entries) || !Number.isFinite(saved.trackedTicks) || !saved.configurations) throw new Error('Unrecognized log format');
+    diagnostics=new PlaytestLog(definitions,balance,saved);
+  }
+} catch (error) {logStorageError=`Previous log could not be loaded: ${error instanceof Error?error.message:error}`;}
+diagnostics.session(game,awaitingNewRun?'protected-save':game.state.clock.tick?'resume':'start');
+function persistDiagnostics() {
+  try {localStorage.setItem(LOG_KEY,diagnostics.storageJSON());logStorageError='';}
+  catch (error) {logStorageError=`Log could not be saved: ${error instanceof Error?error.message:error}. Export it to keep this session.`;}
+}
+function renderDiagnostics() {
+  el('log-status').textContent=logStorageError||`Playtest log: ${diagnostics.data.entries.length} entries${diagnostics.data.droppedEntries?` · ${diagnostics.data.droppedEntries} older entries dropped`:''}. Saved locally across runs; export to share.`;
+  el('log-console').textContent=`Console logging: ${diagnostics.data.consoleEnabled?'on':'off'}`;
+  el('log-console').setAttribute('aria-pressed',String(diagnostics.data.consoleEnabled));
+}
+
+/** @param {import('../core/types.js').GameEvent[]} events @param {boolean} [logEvents] */
+function record(events,logEvents=true) {
+  const milestones=events.filter(event=>['unlock','record','completion'].includes(event.type));
+  if (logEvents && milestones.length) diagnostics.mark(game,'milestone',{events:milestones});
   recentEvents=[...events,...recentEvents].slice(0,20);
   if (events.some(event=>event.type==='unlock')) message(events.filter(event=>event.type==='unlock').map(event=>event.detail).join(' '));
   else if (events.some(event => event.type==='graduate' || event.type==='record' || event.type==='publication')) message(events.find(event => event.type==='graduate' || event.type==='record' || event.type==='publication')?.detail ?? 'Milestone completed.');
@@ -73,19 +98,22 @@ function persist() {
   if (!saveEnabled) return;
   try { saveGame(game); el('save-status').textContent='Saved in this browser. Reload resumes paused. Export for a portable copy. No offline progress.'; }
   catch { el('save-status').textContent='Local saving is unavailable. Export JSON to keep this run.'; }
+  persistDiagnostics();
   lastSave=performance.now();
 }
 /** @param {import('../core/types.js').Command} command @param {boolean} [quiet] */
 function send(command,quiet=false) {
   if (awaitingNewRun) return;
+  const logBefore=command.type==='reviewOption'?null:diagnostics.snapshot(game);
   const result=dispatch(game,definitions,balance,command);
+  if (logBefore && (result.ok || !quiet)) diagnostics.command(game,command,result,logBefore);
   if (!result.ok) { if (!quiet) message(result.blockedReasons.join(' · '),true); return; }
   if (command.type==='beginPrestige') {
     closeCompletedPurchases(); stopHold(); running=false; accumulator=0; reviewingPrestige=false; recentEvents=[];
   } else if (command.type==='startNextRun') {
     stopHold(); running=true; accumulator=0; reviewingPrestige=false;
   }
-  record(result.events);
+  record(result.events,false);
   if (!quiet && command.type!=='performStationAction') {
     if (command.type==='beginPrestige') message(`Earned ${game.state.insight.lastAward} Insight. Choose permanent modifiers before rebuilding.`);
     else if (command.type==='buyInsightUpgrade') message('Permanent Insight modifier purchased.');
@@ -98,16 +126,25 @@ function send(command,quiet=false) {
 /** @param {number} ticks */
 function advance(ticks) {
   if (awaitingNewRun || reviewingPrestige || game.state.insight.phase==='shop') return;
-  if (!heldAction) record(advanceTicks(game,definitions,balance,ticks).events);
+  if (!heldAction) {
+    let remaining=ticks;
+    while (remaining>0) {
+      const count=Math.min(remaining,diagnostics.ticksUntilSample());
+      const result=advanceTicks(game,definitions,balance,count);
+      diagnostics.advanced(game,count); record(result.events); remaining-=count;
+    }
+  }
   else for (let index=0;index<ticks;index++) {
     send({type:'performStationAction',actionId:heldAction},true);
-    record(advanceTicks(game,definitions,balance,1).events);
+    const result=advanceTicks(game,definitions,balance,1);
+    diagnostics.advanced(game,1); record(result.events);
   }
 }
 function closeCompletedPurchases() {
   document.querySelectorAll('.completed-purchases, #completed-insight-upgrades').forEach(node=>{ /** @type {HTMLDetailsElement} */(node).open=false; });
 }
 function stopHold() {
+  diagnostics.flush();
   heldAction=null;
   document.querySelectorAll('.is-held').forEach(node => node.classList.remove('is-held'));
 }
@@ -235,7 +272,7 @@ for (const station of definitions.stations) {
     button.addEventListener('click',() => send({type:'buyInvestment',investmentId:item.id}));
     const reason=document.createElement('span'); reason.className='blocked';
     const marker=document.createElement('span'); marker.className='new-option'; marker.textContent='New'; marker.hidden=true; head.prepend(marker);
-    row.addEventListener('focusin',()=>reviewOption(item.id));
+    row.addEventListener('focusin',()=>{reviewOption(item.id);diagnostics.inspect(game,item.id);});
     row.addEventListener('click',()=>reviewOption(item.id));
     row.append(head,effect,gain,button,reason); activePurchases.append(row);
   }
@@ -320,6 +357,7 @@ function renderPrestige() {
 }
 
 function render() {
+  renderDiagnostics();
   const summary=getSummary(game,definitions,balance);
   el('clock').textContent=`Run ${formatDuration(summary.seconds)}`;
   el('total-clock').textContent=`${game.state.clock.totalIsPartial?'Total tracked':'Total'} ${formatDuration(summary.totalSeconds)}`;
@@ -506,24 +544,39 @@ function render() {
 }
 
 el('continue-observing').addEventListener('click',()=>{if (awaitingNewRun || reviewingPrestige || game.state.insight.phase==='shop') return; running=true; accumulator=0; persist(); render();});
-el('pause').addEventListener('click',() => { if (awaitingNewRun || reviewingPrestige || game.state.insight.phase==='shop') return; stopHold(); running=!running; accumulator=0; persist(); render(); });
+el('pause').addEventListener('click',() => { if (awaitingNewRun || reviewingPrestige || game.state.insight.phase==='shop') return; stopHold(); running=!running; accumulator=0; diagnostics.mark(game,running?'resume':'pause'); persist(); render(); });
 document.querySelectorAll('[data-speed]').forEach(node => node.addEventListener('click',() => {
   speed=Number(/** @type {HTMLElement} */(node).dataset.speed);
+  diagnostics.mark(game,'speed',{speed});
   document.querySelectorAll('[data-speed]').forEach(button => button.setAttribute('aria-pressed',String(Number(/** @type {HTMLElement} */(button).dataset.speed)===speed)));
   render();
 }));
-for (const seconds of [10,60]) el(`advance-${seconds}`).addEventListener('click',() => { stopHold(); advance(seconds/TICK_SECONDS); persist(); render(); });
+for (const seconds of [10,60]) el(`advance-${seconds}`).addEventListener('click',() => { stopHold(); diagnostics.mark(game,'time-skip',{seconds}); advance(seconds/TICK_SECONDS); persist(); render(); });
 el('review-prestige').addEventListener('click',()=>{
-  stopHold(); resumeAfterReview=running; running=false; accumulator=0; reviewingPrestige=true; persist(); render(); el('prestige-panel').scrollIntoView({block:'start'});
+  stopHold(); resumeAfterReview=running; running=false; accumulator=0; reviewingPrestige=true; diagnostics.mark(game,'prestige-review'); persist(); render(); el('prestige-panel').scrollIntoView({block:'start'});
 });
-el('keep-run').addEventListener('click',()=>{reviewingPrestige=false; running=resumeAfterReview; accumulator=0; render();});
+el('keep-run').addEventListener('click',()=>{reviewingPrestige=false; running=resumeAfterReview; accumulator=0; diagnostics.mark(game,'prestige-cancel',{running});persistDiagnostics();render();});
 el('confirm-prestige').addEventListener('click',()=>send({type:'beginPrestige'}));
 el('export-before-prestige').addEventListener('click',()=>exportGame(game));
 el('start-next-run').addEventListener('click',()=>{send({type:'startNextRun'});el('stations').scrollIntoView({block:'start'});});
+el('export-log').addEventListener('click',()=>{
+  diagnostics.mark(game,'export');
+  persistDiagnostics();
+  downloadSave(diagnostics.export(),`eyes-playtest-${new Date().toISOString().replaceAll(':','-')}.json`);
+  renderDiagnostics();
+});
+el('log-console').addEventListener('click',()=>{
+  diagnostics.flush();diagnostics.data.consoleEnabled=!diagnostics.data.consoleEnabled;
+  diagnostics.mark(game,'console',{enabled:diagnostics.data.consoleEnabled});persistDiagnostics();renderDiagnostics();
+});
+el('clear-log').addEventListener('click',()=>{
+  if (!confirm('Clear the playtest log? Export it first to keep a copy. Your game progress is unchanged.')) return;
+  diagnostics=new PlaytestLog(definitions,balance);diagnostics.session(game,'manual-clear');persistDiagnostics();renderDiagnostics();
+});
 el('export').addEventListener('click',() => { if (awaitingNewRun) downloadSave(oldSave,'eyes-on-the-universe-previous-save.json'); else exportGame(game); });
 el('export-old').addEventListener('click',() => downloadSave(oldSave,'eyes-on-the-universe-previous-save.json'));
 function startNew() {
-  closeCompletedPurchases(); stopHold(); game=createGame(); reviewingPrestige=false; running=true; awaitingNewRun=false; saveEnabled=true; recentEvents=[]; accumulator=0;
+  stopHold(); const previous=diagnostics.snapshot(game); game=createGame(); diagnostics.mark(game,'restart',{},previous); reviewingPrestige=false; running=true; awaitingNewRun=false; saveEnabled=true; recentEvents=[]; accumulator=0;
   el('old-save').hidden=true; message('A fresh start. Click or hold Observe, then establish an observing routine.'); persist(); render();
 }
 el('start-new').addEventListener('click',() => {
@@ -536,14 +589,14 @@ el('import').addEventListener('change',async () => {
   try {
     const candidate=deserializeGame(await file.text());
     if (awaitingNewRun && oldSave) backupPreviousSave(oldSave);
-    closeCompletedPurchases(); stopHold(); game=candidate; reviewingPrestige=false; running=false; accumulator=0; saveEnabled=true; awaitingNewRun=false; recentEvents=[]; el('old-save').hidden=true;
+    stopHold(); const previous=diagnostics.snapshot(game); game=candidate; diagnostics.session(game,'import'); diagnostics.mark(game,'import',{},previous); reviewingPrestige=false; running=false; accumulator=0; saveEnabled=true; awaitingNewRun=false; recentEvents=[]; el('old-save').hidden=true;
     message(game.state.insight.phase==='shop'?'Insight shop imported. Choose modifiers, then begin the next run.':'Station save imported. Press Run to continue.'); persist(); render();
   } catch (error) { message(`Import left your current run unchanged: ${error instanceof Error?error.message:error}`,true); }
   input.value='';
 });
 window.addEventListener('blur',stopHold);
-document.addEventListener('visibilitychange',() => { if (document.hidden) { stopHold(); running=false; accumulator=0; persist(); render(); } });
-window.addEventListener('pagehide',() => { stopHold(); persist(); });
+document.addEventListener('visibilitychange',() => { if (document.hidden) { stopHold(); running=false; accumulator=0; diagnostics.mark(game,'hidden-tab'); persist(); render(); } });
+window.addEventListener('pagehide',() => { stopHold(); diagnostics.mark(game,'pagehide'); persist(); });
 function frame(now=performance.now()) {
   const elapsed=Math.min(.25,(now-lastFrame)/1000); lastFrame=now;
   if (running && !reviewingPrestige && game.state.insight.phase==='playing' && !document.hidden && !awaitingNewRun) {

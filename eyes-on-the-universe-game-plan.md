@@ -513,3 +513,147 @@ Primary-source starting points, consulted 2026-10-15. These support scientific b
 9. [AAVSO — Research opportunities](https://aavso.org/research-opportunities/): Amateur/professional research participation and photometric/spectroscopic archives. Supports the network premise.
 
 Before production, obtain an astronomy review of target properties, instrument/task compatibility, quantitative approximations, exoplanet inference language, and cosmological labels. Maintain a source note alongside each authored science claim. Avoid anchoring the campaign to a rapidly changing “most distant known galaxy” record.
+
+## 9. Future expansion: evolving institutions and exploration
+
+Design notes from the expansion discussion, 2026-10-17. These describe a potential
+direction beyond the current prototype; they are not implemented content or a
+commitment to build every chapter. This section extends the future scope without
+changing current prices, balance, saves or prestige behavior.
+
+### Direction and economic continuity
+
+Keep the existing currency network as the foundation. Extend the loop from
+**observe → understand → build → observe farther** into
+**observe → understand → build → travel → discover**. New frontiers should create
+useful relationships between existing systems, rather than introduce a separate
+economy or merely append larger telescope multipliers.
+
+The preferred direction supersedes the initial suggestion to add Energy and Exotic
+Matter as planned currencies. Neither is currently proposed as a required addition.
+New resources must earn their complexity through a distinct gameplay responsibility
+that existing Data, Knowledge, Funding, Engineering, Expertise, Interest,
+Publications, Collaboration Credits or workforce cannot clearly represent.
+
+Treat network synthesis as a possible first-chapter conclusion when an expansion
+is implemented: humanity can act on what its connected observatories discover.
+Retain a satisfying chapter payoff rather than simply removing the existing ending.
+
+### Stations evolve instead of multiplying panels
+
+Distinguish ordinary expansion (more producers), enhancement (better methods or
+equipment), and transformation (a major purchase changes a station's identity and
+adds capabilities). Transformations provide visible chapter milestones. Prefer
+evolving an existing panel over adding a second panel with the same responsibility.
+Names below are illustrative, not finalized unlocks.
+
+| Existing system | Possible evolution | Continuing responsibility |
+|---|---|---|
+| Observatory | Orbital observatories → deep-space sensors → interstellar arrays | Generate shared Data |
+| Analysis lab | Computing center → autonomous science network | Convert Data into Knowledge; unlock discoveries |
+| Academy | Education campus → robotics institute → autonomous fabrication | Train people and later manufacture robotic workers |
+| Research institute | Advanced research center → distributed intelligence institute | Generate Expertise; improve established production methods |
+| Engineering workshop | Orbital shipyard → autonomous construction network → megastructure engineering | Generate Engineering; construct infrastructure |
+| Outreach | Planetary communications → interstellar communications | Generate Interest |
+| Support office | International funding agency → interstellar development authority | Generate Funding from public and scientific support |
+| Scientific programs | Robotic expeditions → interstellar research programs | Generate Publications and enable discoveries |
+| Joint science | Mission coordination → interstellar research consortium | Generate Collaboration Credits; strengthen connected systems |
+
+Within a run, transformations retain the contribution of earlier purchases.
+Classrooms and teachers continue working after robotics unlocks; workshop output
+continues contributing after orbital construction becomes available. Later tiers
+must not make the founding network irrelevant or require duplicate maintenance.
+Some stations may gain a successor identity; exact replacement rules remain open,
+but ordinary advancement must preserve accumulated productive value.
+
+### Academy and robotics
+
+Robotics is the clearest candidate for the first institutional transformation:
+
+1. Existing classrooms continue training people on independent automatic timers.
+2. Graduates establish a robotics department through Funding, Knowledge and
+   Engineering purchases.
+3. Fabrication lines produce robots on independent automatic timers.
+4. Simple destination-station purchases permanently appoint robots to remote
+   observation, construction and exploration.
+5. Additional lines have increasing purchase costs. Better methods improve output
+   per cycle instead of reducing production to instant click spam.
+
+Keep people and robots distinguishable if they serve distinct roles. People can
+establish teams, teach and lead programs; robots can scale remote operations.
+Advanced installations may require a human team plus autonomous units. Both remain
+simple permanent appointments, with no percentage allocation or assignment screen.
+
+Robots would still be an additional workforce stock, so their distinct uses must
+justify that complexity. Avoid separate drone, android, construction-bot and
+probe-worker wallets. Exact workforce costs, restrictions and UI need playtesting.
+
+### Potential chapter progression
+
+1. **Deep-space probes.** Build on the current observatory network with outer-planet,
+   icy-moon, outer-system and interstellar-precursor programs. Funding, Knowledge,
+   Engineering and workforce establish permanent missions producing shared Data
+   and Publications. Discoveries open useful instruments, communications,
+   construction methods and research across the existing network. More probes and
+   better equipment increase production; earlier missions remain useful.
+2. **Orbital infrastructure and space stations.** Transform Engineering into orbital
+   construction and add robotics capability to the Academy. Stations support
+   fabrication, research and exploration through established currencies. Give each
+   installation a clear role rather than making it produce everything. Power and
+   propulsion can be represented by technology and equipment purchases without
+   automatically becoming new resource wallets.
+3. **Interstellar exploration.** Progress through precursor probes, robotic
+   expeditions, destination outposts and a connected star-system network. Use
+   authored destinations initially. Discoveries unlock complementary improvements
+   to Engineering, observing, analysis or propulsion, rather than separate planetary
+   resource inventories. Collaboration Credits connect and improve the network.
+4. **Extreme physics and black holes.** Spread distant observation, nearby research,
+   advanced installations and eventually fictional spacetime engineering across
+   several milestones. Existing science and construction systems should support
+   these capabilities. Exotic technologies need not imply exotic currencies.
+5. **Cosmic exploration.** Galaxy-scale instruments and distributed expeditions
+   pursue a final scientific objective. A possible finale is investigating an
+   anomaly, opening a fictional passage beyond the observable horizon, and receiving
+   a first signal from the other side. This is an optional narrative direction,
+   not an established ending. A “center” or physical “edge of the universe,” if
+   used, must be framed as a fictional premise rather than established astronomy.
+
+The overall arc is ground-based institutions → space-capable institutions →
+autonomous interstellar network → civilization-scale scientific infrastructure.
+Keep curiosity and discovery as the motivation even when the technology becomes
+explicit science fiction.
+
+### Gameplay constraints across chapters
+
+- Resource production creates the main wait. Avoid long mandatory travel or
+  construction countdowns becoming the only remaining activity. Academy-style
+  workforce timers remain appropriate; exploration should not recreate the old
+  endgame waiting problem.
+- Keep independent production, simple purchase buttons, permanent appointments and
+  increasing costs. No recurring automatic operating drains, reversible allocation
+  or compulsory micromanagement.
+- Each chapter feeds back into established stations. Data supports research and
+  expansion, Publications support meaningful advancement and funding opportunities,
+  Expertise improves new methods, and Engineering builds each infrastructure tier.
+- Retain the full-reset Insight model initially. New unlocks depend on capabilities
+  and resources, not prestige count. Consider modifier extensions only when the new
+  systems exist; no second prestige layer is currently agreed.
+- Reveal new capabilities gradually, retain new-option indicators, and communicate
+  each station's evolving responsibility. Avoid filling the current UI with distant
+  locked content.
+
+### Suggested first expansion slice and open decisions
+
+Start with one connected chapter: a chapter-completion handoff, an Academy robotics
+branch, Engineering's first orbital-construction capability, and a small set of
+complementary autonomous probe programs. Prefer extending existing station panels;
+a dedicated mission panel is justified only if its interaction needs are distinct.
+Probe discoveries should improve the founding network and lead toward broader
+orbital industry. Validate those relationships before committing to interstellar
+or cosmic-scale content.
+
+Before implementation, settle the exact first destinations, people/robot roles,
+transformation unlock sequence and initial chapter endpoint. Numerical costs,
+chapter lengths, travel representation, later prestige scaling and the final
+science-fiction narrative remain open. Use playtest diagnostics to check resource
+usefulness and idle periods; keep verification proportional to prototype changes.

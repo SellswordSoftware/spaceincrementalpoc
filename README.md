@@ -4,6 +4,9 @@ An incremental astronomy prototype built around independent stations, one Data
 wallet, permanent investments and optional prestige. Click or hold to help a
 station while every purchased producer continues working.
 
+The [production rewrite plan](rewrite-plan.md) describes the web-first TypeScript,
+PixiJS and HTML/CSS direction, core consolidation, and subsequent Tauri desktop release.
+
 ## Run locally
 
 Use Node.js **24.16.0**, pinned in `.node-version` and `.nvmrc`.
@@ -210,6 +213,39 @@ phases and fractional reward banks convert into accrued Publications/Credits.
 Existing joint teams retain dedicated staff without taking previously unassigned
 graduates. Already-paid synthesis completes on migration. Earlier construction
 remains owned even if this revision adds requirements to future purchases.
+
+## Playtest diagnostics
+
+Use **Export playtest log** in the footer after a session and attach the JSON for
+balance review. **Console logging** optionally mirrors entries to DevTools; filter
+for `playtest`. Logging stays local and sends nothing to a server. **Clear playtest
+log** starts a new recording without changing your game.
+
+The log records:
+
+- Purchases/Insight spending, paid costs, owned level, and before/after currency
+  balances and income rates. Prestige entries retain the ending run's snapshot
+  alongside the next run's reset state.
+- Repeated observing/assistance and Data analysis as counted batches with their
+  first/last timestamps, total analyzed quantity and total costs.
+- Every 30 simulated seconds: currencies, production rates, purchases, upgrades,
+  people, prestige availability and the current saving target's price/blockers.
+  Focus a purchase row to record it as the target; completed purchases clear it.
+- Time since the last economic action, investment and each recorded currency spend;
+  imports, restarts, pauses, speed changes, time skips and session boundaries.
+- Exact balance definitions/configuration, ISO wall timestamps, run number/run
+  seconds and a continuous timeline of simulation time observed by the logger.
+
+The logger works with both per-run and campaign-clock game versions. It does not
+invent earlier playtime: a session starting from an older save records its starting
+run/time offset. Tracked seconds exclude pauses, offline time and the Insight shop;
+wall timestamps show real elapsed gaps. Import/restart boundaries are explicit.
+Missing currency-spend ages mean no spend has been recorded for that currency.
+
+Logs persist separately in browser storage across prestiges and reloads. Game-save
+exports do not include them; export the log separately. Retention is capped at
+2,000 entries and 1.5 million stored characters, with dropped-entry counts shown in
+the footer/export. Export at the end of each playtest to preserve its history.
 
 ## Verification and status
 

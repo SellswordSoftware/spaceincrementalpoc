@@ -2,6 +2,7 @@
 
 Version 2.1 — 2026-10-17 — prestige pacing
 
+<<<<<<< Updated upstream
 ## Scientific investment and compact purchases — 2026-10-17
 
 Measured playtest: first reset at 19:42 with 29 Insight (radio + one extra dish),
@@ -65,6 +66,37 @@ saves retain all progress and initialize the total from the known current run;
 prior prestige durations cannot be reconstructed. Label these “Total tracked” if
 previous runs are missing. Fresh games record complete totals. Keep testing minimal:
 reuse the progression test for accumulation, reset retention, shop pause and reload.
+=======
+## Future expansion notes
+
+The [game plan, section 9](eyes-on-the-universe-game-plan.md#9-future-expansion-evolving-institutions-and-exploration)
+records the proposed post-prototype direction: evolve existing stations and retain
+the current resource network through robotics, probes, orbital construction,
+interstellar exploration and eventually explicitly fictional cosmic exploration.
+The initial Energy/Exotic Matter currency suggestion is superseded by this approach.
+These are future design notes, not additional implemented P milestones.
+
+The suggested first slice connects Academy robotics, an orbital Engineering tier
+and autonomous probes, with useful feedback into existing stations. Define its
+workforce roles, unlock sequence and chapter endpoint before implementation.
+Preserve accumulated production within runs, independent stations, resource-driven
+pacing and the full-reset Insight model. Do not add speculative currencies,
+mandatory travel countdowns or a second prestige layer as assumed requirements.
+
+## Playtest diagnostics — 2026-10-17
+
+Add a runtime-neutral, non-economic playtest recorder with browser persistence and
+JSON export. Capture paid actions with costs and before/after stocks/rates, aggregate
+repeated assistance/analysis, and sample every 30 simulated seconds. Include the
+inspected saving target, affordability blockers, purchase counts, prestige payout,
+people, time since investment/action/currency spend and configuration definitions.
+Record run seconds, tracked simulation seconds and ISO wall timestamps across
+prestiges/reload; mark imports/restarts and paused/speed/time-skip boundaries.
+Do not reconstruct pre-recording time or alter game state/save format. Optional
+console mirroring uses a short labelled prefix. Keep browser storage bounded and
+show truncation/persistence failures. Test only aggregation, sampling and retention
+across reset/reload, then browser-check export and real actions.
+>>>>>>> Stashed changes
 
 ## Prestige pacing revision — 2026-10-17
 
