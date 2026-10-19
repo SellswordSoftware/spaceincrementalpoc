@@ -3,22 +3,108 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#101725" />
-    <title>Eyes on the Universe — Development</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0a141e" />
+    <title>Eyes on the Universe</title>
   </head>
   <body>
-    <main>
-      <header>
+    <header id="masthead">
+      <div class="identity">
+        <span class="brand-mark" aria-hidden="true">✦</span>
         <div>
-          <p class="eyebrow">Development scaffold</p>
+          <p class="eyebrow">An observatory in the making</p>
           <h1>Eyes on the Universe</h1>
         </div>
-        <p id="status" role="status">Starting renderer…</p>
-      </header>
-      <div id="scene" role="img" aria-label="A planet and its orbit"></div>
-      <footer>TypeScript · PixiJS · HTML/CSS</footer>
+      </div>
+      <div class="time-controls">
+        <button id="completion-status" hidden>✦ Network complete</button>
+        <span id="clock">Run 1 · 00:00</span><button id="pause" aria-pressed="false">Pause</button
+        ><button id="prestige" hidden>Review prestige</button>
+      </div>
+    </header>
+    <section id="hud" aria-label="Network resources">
+      <div id="balances"></div>
+      <p id="objective"></p>
+    </section>
+    <main id="landscape" aria-label="Observatory landscape">
+      <div id="scene" aria-label="Interactive station map"></div>
+      <nav id="station-nav" aria-label="Stations"></nav>
+      <div class="map-controls" aria-label="Camera controls">
+        <button id="overview">Overview</button><button id="zoom-out" aria-label="Zoom out">−</button
+        ><button id="zoom-in" aria-label="Zoom in">+</button
+        ><button id="fullscreen">Fullscreen</button>
+      </div>
+      <p class="map-hint">Hover to inspect · Click to pin · Drag to explore · Scroll to zoom</p>
     </main>
+    <section id="station-panel" class="floating-panel" aria-labelledby="station-title" hidden>
+      <header class="panel-heading">
+        <div>
+          <p id="station-subtitle" class="eyebrow"></p>
+          <h2 id="station-title"></h2>
+        </div>
+        <div class="panel-buttons">
+          <button id="pin-panel" aria-pressed="false">Pin</button
+          ><button class="panel-close" aria-label="Close station panel">×</button>
+        </div>
+      </header>
+      <div id="station-body"></div>
+    </section>
+    <aside id="item-tooltip" class="floating-panel item-tooltip" role="tooltip" hidden></aside>
+    <footer id="footer">
+      <p id="message" role="status">
+        Hover the observatory to begin. Every installed station runs independently.
+      </p>
+      <details>
+        <summary>Prototype tools</summary>
+        <div class="tool-menu">
+          <label
+            >Simulation speed
+            <select id="speed">
+              <option value="1">1×</option>
+              <option value="5">5×</option>
+              <option value="20">20×</option>
+            </select></label
+          ><button id="advance-10">+10 s</button><button id="advance-60">+60 s</button
+          ><button id="export">Export save</button
+          ><label class="file-button"
+            >Import save<input id="import" type="file" accept=".json,application/json" /></label
+          ><button id="export-log">Export playtest log</button
+          ><button id="restart">New game</button>
+        </div>
+      </details>
+    </footer>
+    <dialog
+      id="completion-dialog"
+      aria-labelledby="completion-title"
+      aria-describedby="completion-copy"
+    >
+      <p class="eyebrow">Final network synthesis</p>
+      <h2 id="completion-title">Eyes on the Universe complete</h2>
+      <p id="completion-copy">
+        Your observatories, researchers and engineering teams have connected the network and
+        completed its final synthesis. You have reached the end of this prototype.
+      </p>
+      <p id="completion-stats" class="muted"></p>
+      <p>
+        The game is paused. Keep observing to continue this network, or review prestige to rebuild
+        with Insight.
+      </p>
+      <div class="dialog-actions">
+        <button id="continue-observing" autofocus>Keep observing</button>
+        <button id="completion-prestige">Review prestige</button>
+      </div>
+    </dialog>
+    <dialog id="prestige-dialog" aria-labelledby="prestige-title">
+      <p class="eyebrow">A new perspective</p>
+      <h2 id="prestige-title"></h2>
+      <p id="prestige-copy"></p>
+      <div id="insight-shop"></div>
+      <div class="dialog-actions">
+        <button id="cancel-prestige">Keep this run</button
+        ><button id="confirm-prestige">Reset run and earn Insight</button
+        ><button id="start-run" hidden>Begin next run</button>
+      </div>
+    </dialog>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

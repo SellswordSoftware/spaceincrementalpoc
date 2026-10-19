@@ -1,6 +1,6 @@
-# Eyes on the Universe — Rewrite scaffold
+# Eyes on the Universe — Web rewrite
 
-Standalone web starter using TypeScript, PixiJS and HTML/CSS with Vite+.
+Playable placeholder interface using TypeScript, PixiJS and HTML/CSS with Vite+.
 The original prototype is separate and remains runnable from the parent directory.
 See the [rewrite plan](../rewrite-plan.md) for the planned migration.
 
@@ -18,8 +18,26 @@ npm run dev
 ```
 
 Open <http://localhost:5174>. The separate port avoids the prototype's default port.
-The startup page draws a simple Pixi scene; it has no gameplay, camera controls,
-saves, external assets or desktop integration yet.
+The landscape uses graphic primitives and the ported economy. Hover a station for
+its stats and purchases; hover or focus a purchase for a second descriptive popup.
+Move into the panel to use its controls, or click a station to pin it open. Station
+navigation buttons also support keyboard and touch. Drag the landscape to pan,
+scroll to zoom, or use Overview and the camera buttons. Hold a station's help button
+to assist it while all installed production continues.
+
+Completed purchases hide automatically; the panel has a toggle to show them.
+Gold stations/navigation badges indicate unreviewed options. New systems reveal
+as the network develops. Purchase prices and availability come from the core.
+
+Prototype tools in the footer include time skips, simulation speed, save import/
+export, playtest-log export and a fresh-game action. Rewrite saves/logs use separate
+browser storage keys; the original prototype's browser save is never overwritten.
+Reload resumes paused. Hidden-tab time is not simulated.
+
+The port still uses the recorded **0.16.0-pacing / schema 14** baseline. The original
+prototype has since advanced; its newer saves are rejected rather than downgraded.
+Porting that newer economy and its campaign clock is separate work. Compatible
+baseline exports can be imported through the footer. Tauri is not installed yet.
 
 ```sh
 npm run check       # Formatting, lint and type checks through Vite+
@@ -31,20 +49,24 @@ npm run preview    # Serve the production build locally
 ```
 
 The lockfile pins dependencies. Vite+ is installed locally and uses npm; there is
-no workspace coupling to the prototype. Relative build URLs support static hosting
-under a subpath. Deployment is not configured for this scaffold.
+no runtime coupling to the prototype. The parity test reads its recorded Git
+revision, so it requires Git, tar and that commit in local history (a full clone).
+The parent prototype has its own test command. Relative build URLs support static
+hosting under a subpath. Deployment is not configured for this rewrite.
 
 ## Starting points
 
-- `src/main.ts`: Pixi initialization, a placeholder scene and hot-reload cleanup.
-- `src/style.css` and `index.html`: screen-space HTML/CSS shell.
+- `src/main.ts`: simulation loop, saves, diagnostics, HUD and prestige controls.
+- `src/ui/world.ts`: Pixi primitives, station interaction and camera controls.
+- `src/ui/panels.ts`: floating station panels and item tooltips.
+- `src/style.css` and `index.html`: screen-space HTML/CSS interface.
 - `vite.config.ts`: Vite+ build, lint/format checks and development server.
 - `tsconfig.json`: strict TypeScript; current web typings supply Pixi's WebGPU types.
 
 The [TypeScript core](CORE.md) now contains the prototype economy, progression,
 prestige, saves and a separate diagnostics recorder. It runs without Pixi or browser
-globals. The starter scene is not connected to gameplay yet. Tauri remains the
-selected later desktop shell; it is not installed yet.
+globals. The interface consumes its commands and queries without introducing a
+second economy. Tauri remains the selected later desktop shell.
 
 Tooling: [Vite+ local CLI](https://viteplus.dev/guide/local-cli),
 [PixiJS quick start](https://pixijs.com/8.x/guides/getting-started/quick-start).

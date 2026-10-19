@@ -1,29 +1,41 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { mkdtemp, readFile, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import test from "node:test";
-import * as legacy from "../../src/core/index.js";
 import * as port from "../src/core/index.ts";
 import { PlaytestLog } from "../src/diagnostics/playtest-log.ts";
 
 // Reuse the prototype's ordinary-command scenarios without copying a second test policy.
 // Their core imports go through an adapter comparing both engines at every operation.
 test("TypeScript matches the prototype through growth, completion, save/load and prestige", async () => {
-  assert.deepEqual(port.definitions, legacy.definitions);
-  assert.deepEqual(port.balance, legacy.balance);
-  assert.deepEqual(port.core.createGame(), legacy.createGame());
   assert.equal("document" in globalThis, false);
   const directory = await mkdtemp(join(tmpdir(), "eyes-core-parity-"));
   try {
-    const base = new URL("../../", import.meta.url);
+    // The prototype continues evolving; compare against the recorded port baseline.
+    const revision = "3a504e0ed4956a30c4f7005c9744e03c85b9fe02";
+    const archive = execFileSync(
+      "git",
+      ["archive", revision, "src/core", "src/definitions", "scenarios"],
+      {
+        cwd: fileURLToPath(new URL("../../", import.meta.url)),
+      },
+    );
+    execFileSync("tar", ["-x", "-C", directory], { input: archive });
+    await writeFile(join(directory, "package.json"), '{"type":"module"}');
+    const base = pathToFileURL(`${directory}/`);
+    const legacy = await import(new URL("src/core/index.js", base).href);
+    assert.deepEqual(port.definitions, legacy.definitions);
+    assert.deepEqual(port.balance, legacy.balance);
+    assert.deepEqual(port.core.createGame(), legacy.createGame());
     const moduleURL = pathToFileURL(join(directory, "adapter.mjs")).href;
     const adapter = `
       import assert from 'node:assert/strict';
       import * as oldCore from '${new URL("src/core/index.js", base)}';
       import * as oldEconomy from '${new URL("src/core/rates.js", base)}';
-      import * as newCore from '${new URL("rewrite/src/core/index.ts", base)}';
+      import * as newCore from '${new URL("../src/core/index.ts", import.meta.url)}';
       const old = { ...oldCore, ...oldEconomy }, next = newCore.core;
       const mirrors = new WeakMap();
       export const definitions = old.definitions, balance = old.balance, TICK_SECONDS = old.TICK_SECONDS;

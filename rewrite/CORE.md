@@ -1,8 +1,9 @@
 # TypeScript core
 
-The implemented prototype economy now runs as standalone TypeScript. The Pixi
-starter scene is still separate; this change does not introduce new gameplay,
-rebalance progression or write browser saves.
+The recorded prototype economy runs as standalone TypeScript. A Pixi landscape
+and HTML/CSS station interface now consume it; the UI does not rebalance progression
+or add economic rules. The runtime still uses the 0.16.0-pacing / schema 14 baseline,
+not the newer economy now implemented in the parent prototype.
 
 ## Use
 
@@ -57,8 +58,9 @@ the browser; the host-specific diagnostics observer also uses `Date` and console
 ## Verification and baseline
 
 Run `npm run check`, `npm run typecheck`, `npm test`, and `npm run build`.
-There is one parity test, reusing the existing ordinary-command scenarios through
-a temporary adapter. It compares both engines' quotes, events, summaries and state
+There is one parity test, reading the recorded Git revision into a temporary
+directory and reusing its ordinary-command scenarios through an adapter. It requires
+Git, tar and the baseline commit in local history. It compares quotes, events, summaries and state
 changes through the first-run ending and prestige/rebuild. It also checks portable
 save round trips, the prior balance-only migration and diagnostic sampling/reset
 continuity. The adapter is test-only: production modules import no prototype code.
@@ -86,7 +88,7 @@ defaults. No code is minified or omitted from the comparison to claim a reductio
 
 ## Next step
 
-Connect a thin HTML/CSS station interface to this core, preserve diagnostic and
-save controls, and establish browser parity before expanding the Pixi landscape.
-The original prototype remains runnable while that interface is built. Robotics,
+Continue refining the placeholder landscape and station interactions. Migrate the
+newer prototype economy/save format as its own core change with an updated parity
+baseline. The original prototype remains independently runnable. Artwork, robotics,
 new chapters and Tauri integration remain separate later work.

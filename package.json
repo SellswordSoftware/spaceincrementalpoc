@@ -10,7 +10,7 @@
     "build": "node tools/build.js",
     "dev": "node tools/server.js",
     "check": "tsc -p jsconfig.json && tsc -p tools/jsconfig.json",
-    "test": "node --test",
+    "test": "node --test test/*.test.js",
     "scenario:stations": "node scenarios/stations.js",
     "scenario:prestige": "node scenarios/prestige.js",
     "scenario:engineering": "node scenarios/engineering.js",
