@@ -236,3 +236,40 @@ The rewrite is accepted when current gameplay is preserved, the converted core i
 smaller and easier to follow, the landscape supports the desired zoom/focus pattern,
 web delivery works independently, and the desktop wrapper adds no economic fork.
 Report the size comparison and concrete simplifications alongside verification.
+
+
+## Playtest refinements — 2026-10-18
+
+Implemented in the web rewrite as 0.19.0-rewrite-balance (schema 14). These changes
+respond to the retained late-run portion of eyes-rewrite-playtest.json; earlier runs
+were missing, so the first-prestige timing still needs a fresh complete playtest.
+
+- Preserve complete campaign logs in an incremental IndexedDB archive. Migrate the
+  previous localStorage log on load, retain inherited dropped-entry counts, and record
+  assistance gains separately from passive production. Hovering no longer changes
+  the explicitly tracked purchase. Existing missing history cannot be reconstructed.
+- Normalize instant analysis for frontier volume and observing Insight. Strengthen
+  archives (0.5 base Knowledge/s) and analysts (2/s); show conversion rewards before
+  spending Data. Keep analysis immediate while observing continues.
+- Add research partnerships (Interest/Knowledge/Expertise) and international funding
+  consortia (Interest/Knowledge/Collaboration) as staged Funding productivity upgrades.
+- Distinguish new options (gold) from affordable purchases (teal). Add explicit Track
+  controls, a persistent purchase display, current-production wait estimates, and
+  readiness-transition feedback. Estimates assume resources are saved for the target.
+- Reduce the infrared Engineering concentration: shield 144k, commissioning 96k.
+  Commissioning also requires network integration, 300 Expertise and 1,500 Credits.
+  Increase late observing research Knowledge requirements; deep-time teams require
+  6,000 Publications and 2,000 Credits. Add a unified deep-field catalog requiring
+  12,000 Publications and spending Data, 600k Knowledge, 600 Expertise and 4,000 Credits.
+  Synthesis qualifies at 15,000 Publications and spends 400k Knowledge and 6,000 Credits.
+  Publications remain cumulative qualifications. All purchases are instant.
+- Teaching teams retain asynchronous 40-second cycles. Their stock costs grow ×4
+  instead of ×3; teaching practice adds 15% rather than 25% graduates per level.
+- Assistance scales with station capacity: each action gives at least 0.125 seconds
+  of current resource production (50% extra when continuously held at four actions/s),
+  while preserving the original early click reward as a floor.
+
+Preserve existing saves, Insight, stocks and earned completion through a known-baseline
+metadata migration. Do not erase previous Knowledge surpluses or grandfathered teachers.
+A new campaign is the appropriate next balance comparison. The original prototype
+remains separate; its newer schema and campaign-clock migration are not part of this work.

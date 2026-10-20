@@ -35,6 +35,8 @@ export function createPanels(
   inspect: (id: string) => void,
   hold: (id: string | null) => void,
   world: World,
+  track: (id: string | null) => void,
+  tracked: () => string | null,
 ) {
   const panel = document.querySelector<HTMLElement>("#station-panel")!;
   const body = document.querySelector<HTMLElement>("#station-body")!;
@@ -47,7 +49,13 @@ export function createPanels(
   let detail: { item: Investment; row: HTMLElement } | null = null;
   const rows = new Map<
     string,
-    { row: HTMLElement; owned: HTMLElement; buy: HTMLButtonElement; fresh: HTMLElement }
+    {
+      row: HTMLElement;
+      owned: HTMLElement;
+      buy: HTMLButtonElement;
+      fresh: HTMLElement;
+      trackButton: HTMLButtonElement;
+    }
   >();
   const actions = new Map<string, HTMLButtonElement>();
   const stats = element("div", "station-stats");
@@ -78,7 +86,12 @@ export function createPanels(
   }
   function leave() {
     cancelClose();
-    if (!pinned) closeTimer = window.setTimeout(close, 450);
+    // Pixi's station leave can arrive after the DOM panel's pointerenter.
+    // The pointer's current location, rather than event order, owns the popup.
+    if (!pinned && !panel.matches(":hover"))
+      closeTimer = window.setTimeout(() => {
+        if (!pinned && !panel.matches(":hover")) close();
+      }, 450);
   }
   function position() {
     if (!active || panel.hidden) return;
@@ -154,7 +167,7 @@ export function createPanels(
   }
   function select(id: StationId, shouldPin = false) {
     cancelClose();
-    if (pinned && !shouldPin && active !== id) return;
+    if ((pinned || panel.matches(":hover")) && !shouldPin && active !== id) return;
     if (active !== id) {
       hold(null);
       hideDetail();
@@ -218,7 +231,12 @@ export function createPanels(
         const buy = element("button", "buy");
         buy.dataset.buy = item.id;
         buy.addEventListener("click", () => send({ type: "buyInvestment", investmentId: item.id }));
-        row.append(heading, buy);
+        const trackButton = element("button", "track-purchase", "Track");
+        trackButton.setAttribute("aria-label", `Track ${item.name}`);
+        trackButton.addEventListener("click", () => track(tracked() === item.id ? null : item.id));
+        const controls = element("div", "purchase-controls");
+        controls.append(buy, trackButton);
+        row.append(heading, controls);
         row.addEventListener("mouseenter", () => showDetail(item, row));
         row.addEventListener("mouseleave", hideDetail);
         row.addEventListener("focusin", () => showDetail(item, row));
@@ -226,7 +244,7 @@ export function createPanels(
           if (!row.contains(event.relatedTarget as Node | null)) hideDetail();
         });
         purchases.append(row);
-        rows.set(item.id, { row, owned, buy, fresh });
+        rows.set(item.id, { row, owned, buy, fresh, trackButton });
       }
     }
     pinned = shouldPin || pinned;
@@ -260,7 +278,12 @@ export function createPanels(
       );
     if (active === "observatory")
       lines.push(`${summary.frontier.name} · Data yield ×${summary.frontier.yield}`);
-    if (active === "analysis") lines.push(`${number(core.analysisYield(game))} Knowledge per Data`);
+    if (active === "analysis") {
+      lines.push(
+        `${number(core.analysisYield(game))} Knowledge per Data (accounts for frontier volume)`,
+      );
+      lines.push("Archives and analysts earn Knowledge continuously without spending Data.");
+    }
     if (active === "support")
       lines.push(`${summary.grants.active} grants / ${summary.grants.capacity} Publication slots`);
     if (active === "academy") {
@@ -290,10 +313,12 @@ export function createPanels(
     for (const action of core.definitions.actions.filter((action) => actions.has(action.id))) {
       const button = actions.get(action.id)!;
       button.hidden = !action.requires.every((id) => core.hasPrerequisite(game, id));
-      button.textContent = `${action.name} · +${costs(core.scaledOutput(game, action.output))}`;
+      button.textContent = `${action.name} · +${costs(core.actionOutput(game, action.id))}`;
     }
     for (const button of help.querySelectorAll<HTMLButtonElement>("[data-analysis]")) {
       button.hidden = !core.hasPrerequisite(game, "analysis-tools");
+      const quantity = button.dataset.analysis === "10" ? 10 : game.state.resources.D;
+      button.textContent = `${button.dataset.analysis === "10" ? "Analyze 10 Data" : "Analyze all Data"} → ${number(quantity * core.analysisYield(game))} Knowledge`;
       button.setAttribute(
         "aria-disabled",
         String(game.state.resources.D < (button.dataset.analysis === "10" ? 10 : Number.EPSILON)),
@@ -320,6 +345,10 @@ export function createPanels(
         ? "Completed"
         : `${item.kind === "appointment" ? "Appoint" : item.kind === "upgrade" ? "Improve" : item.kind === "discovery" ? "Research" : "Build"} · ${costs(quote.costs)}`;
       view.buy.setAttribute("aria-disabled", String(!quote.ok));
+      view.row.classList.toggle("is-ready", quote.ok);
+      view.trackButton.hidden = done;
+      view.trackButton.textContent = tracked() === item.id ? "Tracking" : "Track";
+      view.trackButton.setAttribute("aria-pressed", String(tracked() === item.id));
     }
     empty.hidden = visible > 0;
     renderDetail();

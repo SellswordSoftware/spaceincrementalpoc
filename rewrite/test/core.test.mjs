@@ -1,110 +1,79 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { mkdtemp, readFile, writeFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import test from "node:test";
-import * as port from "../src/core/index.ts";
+import { core, TICK_SECONDS } from "../src/core/index.ts";
 import { PlaytestLog } from "../src/diagnostics/playtest-log.ts";
 
-// Reuse the prototype's ordinary-command scenarios without copying a second test policy.
-// Their core imports go through an adapter comparing both engines at every operation.
-test("TypeScript matches the prototype through growth, completion, save/load and prestige", async () => {
-  assert.equal("document" in globalThis, false);
-  const directory = await mkdtemp(join(tmpdir(), "eyes-core-parity-"));
-  try {
-    // The prototype continues evolving; compare against the recorded port baseline.
-    const revision = "3a504e0ed4956a30c4f7005c9744e03c85b9fe02";
-    const archive = execFileSync(
-      "git",
-      ["archive", revision, "src/core", "src/definitions", "scenarios"],
-      {
-        cwd: fileURLToPath(new URL("../../", import.meta.url)),
-      },
-    );
-    execFileSync("tar", ["-x", "-C", directory], { input: archive });
-    await writeFile(join(directory, "package.json"), '{"type":"module"}');
-    const base = pathToFileURL(`${directory}/`);
-    const legacy = await import(new URL("src/core/index.js", base).href);
-    assert.deepEqual(port.definitions, legacy.definitions);
-    assert.deepEqual(port.balance, legacy.balance);
-    assert.deepEqual(port.core.createGame(), legacy.createGame());
-    const moduleURL = pathToFileURL(join(directory, "adapter.mjs")).href;
-    const adapter = `
-      import assert from 'node:assert/strict';
-      import * as oldCore from '${new URL("src/core/index.js", base)}';
-      import * as oldEconomy from '${new URL("src/core/rates.js", base)}';
-      import * as newCore from '${new URL("../src/core/index.ts", import.meta.url)}';
-      const old = { ...oldCore, ...oldEconomy }, next = newCore.core;
-      const mirrors = new WeakMap();
-      export const definitions = old.definitions, balance = old.balance, TICK_SECONDS = old.TICK_SECONDS;
-      function invoke(name, args) {
-        const converted = args.filter(arg => arg !== definitions && arg !== balance).map(arg => {
-          if (!arg?.state) return arg;
-          if (!mirrors.has(arg)) mirrors.set(arg, structuredClone(arg));
-          return mirrors.get(arg);
-        });
-        const expected = old[name](...args), actual = next[name](...converted);
-        assert.deepEqual(actual, expected, name);
-        if (expected?.state) mirrors.set(expected, actual);
-        if (args[0]?.state) assert.deepEqual(converted[0], args[0], name + ' state');
-        return expected;
-      }
-      ${["createGame", "dispatch", "quoteCommand", "advanceTicks", "getSummary", "serializeGame", "deserializeGame", "previewPrestige", "analysisYield", "scaledOutput"].map((name) => `export const ${name} = (...args) => invoke('${name}', args);`).join("\n")}
-    `;
-    await writeFile(join(directory, "adapter.mjs"), adapter);
-    for (const name of ["stations", "invest", "prestige", "engineering", "horizons", "synthesis"]) {
-      const source = await readFile(new URL(`scenarios/${name}.js`, base), "utf8");
-      await writeFile(
-        join(directory, `${name}.mjs`),
-        source
-          .replace(/'\.\.\/src\/core\/(?:index|rates)\.js'/g, JSON.stringify(moduleURL))
-          .replace(/'\.\/(\w+)\.js'/g, "'./$1.mjs'"),
-      );
-    }
-    const load = (name) => import(pathToFileURL(join(directory, `${name}.mjs`)).href);
-    const { runStationScenario } = await load("stations");
-    const { runEngineeringScenario } = await load("engineering");
-    const { runHorizonsScenario } = await load("horizons");
-    const { runSynthesisScenario } = await load("synthesis");
-    const { runPrestigeScenario } = await load("prestige");
-    const { game } = runStationScenario();
-    runEngineeringScenario(game);
-    runHorizonsScenario(game);
-    runSynthesisScenario(game);
-    assert.ok(game.state.joint.completedAtTick > 0);
-    const completed = port.core.deserializeGame(legacy.serializeGame(game));
-    assert.equal(port.core.serializeGame(completed), legacy.serializeGame(game));
-    // The previous balance-only save migrates to the same economic state in both engines.
-    const previous = {
-      ...game,
-      contentVersion: "0.15.0-production",
-      simulationVersion: "0.15.0-production",
-      balanceId: "production-v1",
-      balanceHash: "fnv1a32-66e896fc",
-    };
-    assert.deepEqual(
-      port.core.deserializeGame(JSON.stringify(previous)),
-      legacy.deserializeGame(JSON.stringify(previous)),
-    );
-    const log = new PlaytestLog(port.core);
-    log.session(completed, "parity");
-    port.core.advanceTicks(completed, 120);
-    log.advanced(completed, 120);
-    assert.equal(log.data.entries.at(-1).type, "sample");
-    const before = log.snapshot(completed);
-    const command = { type: "beginPrestige" };
-    const result = port.core.dispatch(completed, command);
-    assert.equal(result.ok, true);
-    log.command(completed, command, result, before);
-    const resumedLog = new PlaytestLog(port.core, JSON.parse(log.storageJSON()));
-    assert.equal(JSON.parse(resumedLog.export()).entries.at(-1).after.run, 2);
-    assert.equal(resumedLog.data.trackedTicks, 120);
-    assert.equal(completed.state.insight.phase, "shop");
-    assert.deepEqual(port.core.deserializeGame(port.core.serializeGame(completed)), completed);
-    runPrestigeScenario();
-  } finally {
-    await rm(directory, { recursive: true, force: true });
+// The rewrite deliberately differs from the prototype's frozen economy now.
+test("analysis follows analytical investment; developed stations get useful assistance", () => {
+  const game = core.createGame();
+  game.state.purchases["analysis-tools"] = 1;
+  game.state.purchases["observing-routine"] = 1;
+  game.state.resources.D = 100;
+  core.dispatch(game, { type: "processData", quantity: 100 });
+  assert.equal(game.state.resources.K, 20);
+  game.state.purchases["target-deep-field"] = 1;
+  game.state.insight.upgrades["expansive-observing"] = 3;
+  game.state.insight.upgrades["clear-analysis"] = 2;
+  assert.equal(100 * 144 * 8 * core.analysisYield(game), 80);
+  game.state.purchases["support-office"] = 1;
+  game.state.purchases["appoint-fundraiser"] = 30;
+  const before = core.productionRates(game).F;
+  game.state.purchases["research-partnerships"] = 1;
+  assert.equal(core.productionRates(game).F, before * 3);
+  const help = core.actionOutput(game, "contact-supporters").F;
+  assert.equal(help / TICK_SECONDS, core.productionRates(game).F * 0.5);
+  core.dispatch(game, { type: "performStationAction", actionId: "contact-supporters" });
+  assert.equal(game.state.resources.F, help);
+});
+
+test("old rewrite saves retain progress; the revised ending spends collaboration and resets", () => {
+  const game = core.createGame();
+  game.state.resources.K = 123;
+  const old = {
+    ...game,
+    contentVersion: "0.16.0-pacing",
+    simulationVersion: "0.16.0-pacing",
+    balanceId: "pacing-v1",
+    balanceHash: "fnv1a32-4eb033a4",
+  };
+  assert.deepEqual(core.deserializeGame(JSON.stringify(old)), game);
+  // Prepared science buys results immediately; generation sets the pace, not project timers.
+  for (const item of core.definitions.investments)
+    if (item.kind !== "appointment") game.state.purchases[item.id] = 1;
+  delete game.state.purchases["deep-field-catalog"];
+  delete game.state.purchases["network-synthesis"];
+  game.state.purchases.academy = 0;
+  for (const id of ["joint-changing-sky", "joint-planetary-systems", "joint-deep-time"])
+    game.state.purchases[id] = 1;
+  game.state.population.total = 3;
+  game.state.science.publications = 15000;
+  for (const id of Object.keys(game.state.resources)) game.state.resources[id] = 1e9;
+  for (const investmentId of ["deep-field-catalog", "network-synthesis"]) {
+    const before = game.state.resources.C;
+    const result = core.dispatch(game, { type: "buyInvestment", investmentId });
+    assert.equal(result.ok, true, result.blockedReasons.join("; "));
+    assert.equal(before - game.state.resources.C, result.costs.C);
   }
+  assert.equal(game.state.joint.completedAtTick, 0);
+  core.dispatch(game, { type: "beginPrestige" });
+  assert.equal(game.state.joint.completedAtTick, null);
+  assert.equal(game.state.resources.C, 0);
+  assert.ok(game.state.insight.points > 0);
+  assert.deepEqual(core.deserializeGame(core.serializeGame(game)), game);
+});
+
+test("playtest storage retains a campaign longer than the former limits", () => {
+  const game = core.createGame(),
+    log = new PlaytestLog(core);
+  log.session(game, "test");
+  for (let i = 0; i < 2200; i++) {
+    core.advanceTicks(game, 120);
+    log.advanced(game, 120);
+  }
+  const count = log.data.entries.length;
+  assert.ok(count > 2000);
+  assert.ok(log.storageJSON().length > 1500000);
+  assert.equal(log.data.entries.length, count);
+  assert.equal(JSON.parse(log.export()).entries.length, count);
+  assert.equal(log.data.droppedEntries, 0);
 });

@@ -16,6 +16,7 @@ const versions = [
   [12, "0.13.0-synthesis", "7c876725"],
   [13, "0.14.0-progression", "7b4ab164"],
   [14, "0.15.0-production", "66e896fc"],
+  [14, "0.16.0-pacing", "4eb033a4"],
 ] as const;
 type LegacyGame = Omit<GameState, "state"> & {
   state: Omit<State, "science" | "joint"> & {

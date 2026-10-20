@@ -26,7 +26,7 @@ export function createSimulation(economy: Economy) {
     hasPrerequisite,
     prerequisiteName,
     multiplier,
-    scaledOutput,
+    actionOutput,
     analysisYield,
     productionRates,
     facilitySummary,
@@ -222,8 +222,7 @@ export function createSimulation(economy: Economy) {
     } else if (command.type === "processData")
       state.resources.K += command.quantity * analysisYield(game);
     else if (command.type === "performStationAction") {
-      const action = data.actions.get(command.actionId);
-      if (action) produce(game, scaledOutput(game, action.output), 1);
+      produce(game, actionOutput(game, command.actionId), 1);
       state.nextActionTick = state.clock.tick + balance.actionCooldownTicks;
     }
     if (command.type === "buyInvestment") {

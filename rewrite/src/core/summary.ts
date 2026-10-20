@@ -4,7 +4,8 @@ import { TICK_SECONDS } from "./versions.ts";
 import type { Economy } from "./economy.ts";
 import type { Simulation } from "./simulation.ts";
 import { catalog } from "../definitions/catalog.ts";
-export function createSummary(economy: Economy, previewPrestige: Simulation["previewPrestige"]) {
+export function createSummary(economy: Economy, simulation: Simulation) {
+  const { previewPrestige, quoteCommand } = simulation;
   const {
     definitions,
     balance,
@@ -45,7 +46,7 @@ export function createSummary(economy: Economy, previewPrestige: Simulation["pre
       "Hold Observe for extra Data. Purchased production continues when you help elsewhere.";
     if (hasPrerequisite(game, "analysis-tools"))
       suggestion =
-        "Analyze Data for Knowledge now, or expand archive research for permanent income. Both are valid routes.";
+        "Analyze Data for an instant Knowledge boost. More distant observations need more processing per Data; archives and analysts provide steady Knowledge without consuming Data.";
     if (next?.cost.F)
       suggestion =
         "Supporter groups and extra telescopes are optional growth investments. Contact supporters can also help fund the next unlock.";
@@ -87,6 +88,9 @@ export function createSummary(economy: Economy, previewPrestige: Simulation["pre
     );
     return {
       newOptions: newOptions(game),
+      readyOptions: economy
+        .availableInvestments(game)
+        .filter((item) => quoteCommand(game, { type: "buyInvestment", investmentId: item.id }).ok),
       joint: {
         ...game.state.joint,
         programs: definitions.jointPrograms.map((program) => {

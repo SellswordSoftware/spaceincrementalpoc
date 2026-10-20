@@ -18,6 +18,7 @@ type Activity = {
   count: number;
   quantity: number;
   costs: Record<string, number>;
+  gains?: Record<string, number>;
   before: Snapshot;
   after: Snapshot;
 };
@@ -42,7 +43,6 @@ import { core as defaultCore, type Core } from "../core/index.ts";
 import { TICK_SECONDS } from "../core/versions.ts";
 
 const SAMPLE_TICKS = 30 / TICK_SECONDS;
-const MAX_ENTRIES = 2000;
 
 const rounded = (value: number) => Math.round(value * 10000) / 10000;
 
@@ -166,11 +166,6 @@ export class PlaytestLog {
       after,
     };
     this.data.entries.push(entry);
-    if (this.data.entries.length > MAX_ENTRIES) {
-      const removed = this.data.entries.length - MAX_ENTRIES;
-      this.data.entries.splice(0, removed);
-      this.data.droppedEntries += removed;
-    }
     if (this.data.consoleEnabled)
       console.info(
         `[playtest R${after.run} ${after.runSeconds.toFixed(1)}s | ${seconds.toFixed(1)}s tracked] ${type} ${typeof detail.id === "string" ? detail.id : typeof detail.investmentId === "string" ? detail.investmentId : ""}`,
@@ -250,6 +245,11 @@ export class PlaytestLog {
       pending.count++;
       pending.quantity += command.type === "processData" ? command.quantity : 0;
       pending.after = after;
+      const gains = (pending.gains ??= {});
+      for (const [currency, amount] of Object.entries(after.stocks)) {
+        const gain = amount - (before.stocks[currency as keyof typeof before.stocks] ?? 0);
+        if (gain > 0) gains[currency] = (gains[currency] ?? 0) + gain;
+      }
       for (const [currency, cost] of Object.entries(result.costs))
         pending.costs[currency] = (pending.costs[currency] ?? 0) + cost;
       this.data.pending = pending;
@@ -275,9 +275,15 @@ export class PlaytestLog {
   }
 
   inspect(game: Game, investmentId: string) {
-    if (this.data.targetId === investmentId) return;
-    this.data.targetId = investmentId;
+    // Hovering does not replace the player's explicitly tracked purchase. Avoid
+    // repeated full snapshots while the pointer moves around the same station.
+    const previous = this.data.entries.at(-1);
+    if (previous?.type === "inspect" && previous.detail.investmentId === investmentId) return;
     this.mark(game, "inspect", { investmentId });
+  }
+  track(game: Game, investmentId: string | null) {
+    this.data.targetId = investmentId;
+    this.mark(game, "track", { investmentId });
   }
   flush() {
     const pending = this.data.pending;
@@ -291,6 +297,7 @@ export class PlaytestLog {
         count: pending.count,
         quantity: pending.quantity,
         costs: pending.costs,
+        gains: pending.gains ?? {},
       },
       pending.before,
       pending.after,
@@ -308,16 +315,9 @@ export class PlaytestLog {
     return Math.max(1, this.data.nextSampleTick - this.data.trackedTicks);
   }
   storageJSON() {
-    let json = JSON.stringify(this.data);
-    // Bound local storage independently of the game save, including large late-run snapshots.
-    while (json.length > 1500000 && this.data.entries.length) {
-      const removed = Math.max(1, Math.ceil(this.data.entries.length / 10));
-      this.data.entries.splice(0, removed);
-      this.data.droppedEntries += removed;
-      json = JSON.stringify(this.data);
-    }
-    return json;
+    return JSON.stringify(this.data);
   }
+
   export() {
     this.flush();
     return JSON.stringify(
@@ -336,7 +336,7 @@ export class PlaytestLog {
         },
         ...this.data,
         notes:
-          "Tracked seconds count simulation advances observed by this log, excluding pauses/offline/shop. Run times identify the original save offset. Imports/restarts are marked, not assumed continuous campaigns. Missing sinceSpend keys have no recorded spend. Up to 2000 entries / 1.5 million stored characters are retained; droppedEntries reports truncation. Exports are local files, never uploaded automatically.",
+          "Tracked seconds count simulation advances observed by this log, excluding pauses/offline/shop. Run times identify the original save offset. Imports/restarts are marked, not assumed continuous campaigns. Missing sinceSpend keys have no recorded spend. The rewrite archives the full timeline in IndexedDB without an entry or size cap. Any droppedEntries were inherited from an older truncated log and cannot be recovered. Exports are local files, never uploaded automatically.",
       },
       null,
       2,

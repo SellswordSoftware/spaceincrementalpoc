@@ -26,31 +26,32 @@ scroll to zoom, or use Overview and the camera buttons. Hold a station's help bu
 to assist it while all installed production continues.
 
 Completed purchases hide automatically; the panel has a toggle to show them.
-Gold stations/navigation badges indicate unreviewed options. New systems reveal
+Gold stations/navigation badges indicate unreviewed options; teal edges and ready counts show affordable purchases. Track any purchase to pin its current readiness and estimated resource wait in the HUD. New systems reveal
 as the network develops. Purchase prices and availability come from the core.
 
 Prototype tools in the footer include time skips, simulation speed, save import/
 export, playtest-log export and a fresh-game action. Rewrite saves/logs use separate
-browser storage keys; the original prototype's browser save is never overwritten.
+browser storage; the full playtest timeline is archived incrementally in IndexedDB. The original prototype's browser save is never overwritten.
 Reload resumes paused. Hidden-tab time is not simulated.
 
-The port still uses the recorded **0.16.0-pacing / schema 14** baseline. The original
-prototype has since advanced; its newer saves are rejected rather than downgraded.
-Porting that newer economy and its campaign clock is separate work. Compatible
-baseline exports can be imported through the footer. Tauri is not installed yet.
+The rewrite now uses **0.19.0-rewrite-balance / schema 14**, with the playtest-driven
+balance changes recorded in the rewrite plan. Compatible 0.16.0 rewrite/baseline saves
+migrate automatically, preserving stocks, Insight and completion. Existing surpluses
+are retained; a fresh campaign gives the clearest comparison of the new balance.
+Newer schema 15/16 parent-prototype saves still require a separate port.
+Tauri is not installed yet.
 
 ```sh
 npm run check       # Formatting, lint and type checks through Vite+
 npm run typecheck   # TypeScript alone
-npm test            # One headless parity scenario against the original core
+npm test            # Three focused economy/save/log checks
 npm run format     # Apply formatting
 npm run build      # Typecheck and create dist/
 npm run preview    # Serve the production build locally
 ```
 
 The lockfile pins dependencies. Vite+ is installed locally and uses npm; there is
-no runtime coupling to the prototype. The parity test reads its recorded Git
-revision, so it requires Git, tar and that commit in local history (a full clone).
+no runtime coupling to the prototype. The focused tests run directly against the rewrite core with Node's test runner.
 The parent prototype has its own test command. Relative build URLs support static
 hosting under a subpath. Deployment is not configured for this rewrite.
 

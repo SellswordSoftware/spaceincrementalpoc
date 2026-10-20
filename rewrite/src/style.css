@@ -6,6 +6,7 @@
   --line: #36505a;
   --muted: #9db0b5;
   --gold: #e3b969;
+  --ready: #64d9c3;
   --panel: #142630;
 }
 * {
@@ -510,4 +511,48 @@ dialog h2 {
 }
 #completion-dialog p {
   line-height: 1.6;
+}
+
+#purchase-target {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.6rem;
+  padding: 0.35rem 0;
+  font-size: 0.72rem;
+}
+#purchase-target button {
+  padding: 0.3rem 0.5rem;
+}
+#target-status {
+  color: var(--muted);
+}
+#purchase-target.is-ready #target-status {
+  color: var(--ready);
+}
+.station-link.is-ready {
+  border-right: 3px solid var(--ready);
+}
+.station-link.is-ready:not(.is-new) small {
+  color: var(--ready);
+}
+.purchase.is-ready .buy {
+  border-color: var(--ready);
+}
+.purchase-controls {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+.purchase-controls .buy {
+  flex: 1;
+}
+.track-purchase {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  padding: 0.35rem;
+}
+.track-purchase[aria-pressed="true"] {
+  color: var(--gold);
+  border-color: var(--gold);
 }

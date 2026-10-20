@@ -12,7 +12,7 @@ const investments = (items: Purchase[]): Investment[] =>
 import type { Definitions } from "../core/types.ts";
 import { resources } from "./resources.ts";
 export const definitions: Definitions = {
-  contentVersion: "0.16.0-pacing",
+  contentVersion: "0.19.0-rewrite-balance",
   resources,
   insightUpgrades: [
     {
@@ -439,6 +439,44 @@ export const definitions: Definitions = {
   ],
   investments: investments([
     {
+      id: "research-partnerships",
+      name: "Establish research partnerships",
+      station: "support",
+      kind: "upgrade",
+      requires: ["advanced-grants", "research"],
+      publications: 100,
+      cost: { I: 2000, K: 1000, X: 10 },
+      growth: 2.2,
+      maxLevel: 5,
+      boost: { stat: "support", bonus: 2 },
+      effect:
+        "+200% of base Funding/s from supporters, grants and fundraisers per level. Invest Interest, Knowledge and Expertise instead of appointing more people.",
+    },
+    {
+      id: "international-consortium",
+      name: "Build international funding consortium",
+      station: "support",
+      kind: "upgrade",
+      requires: ["joint-science", "flagship-grants"],
+      publications: 1000,
+      cost: { I: 20000, K: 12000, C: 150 },
+      growth: 2,
+      maxLevel: 5,
+      boost: { stat: "support", bonus: 4 },
+      effect:
+        "+400% of base Funding/s per level. Collaboration and public Interest support the whole funding network.",
+    },
+    {
+      id: "deep-field-catalog",
+      name: "Publish unified deep-field catalog",
+      station: "science",
+      requires: ["joint-deep-time", "network-integration"],
+      publications: 12000,
+      cost: { D: 40000000, K: 600000, X: 600, C: 4000 },
+      effect:
+        "Cross-match ground, radio and infrared observations using Knowledge, Expertise and 4,000 Collaboration Credits. Qualify at 12,000 Publications; enables final network synthesis.",
+    },
+    {
       id: "advanced-calibration",
       name: "Develop advanced calibration",
       station: "research",
@@ -601,8 +639,8 @@ export const definitions: Definitions = {
         "infrared-commissioning",
         "target-deep-field",
       ],
-      publications: 3000,
-      cost: { N: 1, D: 1e7, F: 32000, K: 48000 },
+      publications: 6000,
+      cost: { N: 1, D: 1e7, F: 32000, K: 180000, C: 2000 },
       growth: 1.6,
       maxLevel: 50,
 
@@ -684,13 +722,13 @@ export const definitions: Definitions = {
         "joint-changing-sky",
         "joint-planetary-systems",
         "joint-deep-time",
-        "network-integration",
+        "deep-field-catalog",
       ],
-      publications: 5000,
-      cost: { D: 100000000, F: 1000000, K: 100000, E: 100000, C: 500 },
+      publications: 15000,
+      cost: { D: 100000000, F: 1000000, K: 400000, E: 100000, C: 6000 },
 
       effect:
-        "Combine all three programs, network integration and 5,000 Publications. Pay the resources to complete the prototype immediately.",
+        "Combine all three programs, the deep-field catalog and 15,000 Publications. Spend 6,000 Collaboration Credits alongside the network resources to complete the prototype.",
     },
     {
       id: "radio-observatory",
@@ -838,7 +876,7 @@ export const definitions: Definitions = {
       station: "space",
 
       requires: ["infrared-mirror"],
-      cost: { E: 200000, F: 1.2e6, K: 150000 },
+      cost: { E: 144000, F: 1.2e6, K: 150000 },
 
       effect:
         "Complete thermal shielding for the cooled infrared observatory. Commission the distinct flagship next.",
@@ -848,13 +886,13 @@ export const definitions: Definitions = {
       name: "Launch and commission infrared flagship",
       station: "space",
       kind: "producer",
-      requires: ["infrared-shield"],
+      requires: ["infrared-shield", "network-integration"],
       publications: 2000,
-      cost: { E: 120000, F: 0.8e6, K: 90000 },
+      cost: { E: 96000, F: 0.8e6, K: 180000, X: 300, C: 1500 },
 
       output: { D: 96 },
       effect:
-        "Add 96 base Data capacity and continuous science at 0.033 base Publications/s. Earlier missions continue.",
+        "Integrate 1,500 Collaboration Credits and 300 Expertise, then add 96 base Data capacity and continuous science. Earlier missions continue.",
     },
     {
       id: "target-infrared-fields",
@@ -862,7 +900,7 @@ export const definitions: Definitions = {
       station: "analysis",
       kind: "discovery",
       requires: ["infrared-commissioning", "target-transit-targets"],
-      cost: { K: 800 },
+      cost: { K: 80000 },
 
       effect: "Extend the frontier from ×55 to ×89 with infrared observing capability.",
     },
@@ -873,7 +911,7 @@ export const definitions: Definitions = {
       kind: "discovery",
       requires: ["infrared-commissioning", "target-infrared-fields"],
       publications: 3000,
-      cost: { K: 1200 },
+      cost: { K: 240000, X: 300 },
 
       effect:
         "Extend the frontier from ×89 to ×144 at 3,000 Publications. Study early galaxies; the Big Bang is not directly imaged.",
@@ -1111,8 +1149,8 @@ export const definitions: Definitions = {
       cost: { D: 25 },
       growth: 1.4,
       maxLevel: 50,
-      output: { K: 0.2 },
-      effect: "Permanent Knowledge income. Pay Data once; no continuing Data drain.",
+      output: { K: 0.5 },
+      effect: "Add 0.5 base Knowledge/s. Pay Data once; no continuing Data drain.",
     },
     {
       id: "target-jupiter",
@@ -1374,8 +1412,8 @@ export const definitions: Definitions = {
       growth: 1.7,
       maxLevel: 8,
 
-      boost: { stat: "teaching", bonus: 0.25 },
-      effect: "+25% of base graduates per completed cycle. Timers stay at 40 seconds.",
+      boost: { stat: "teaching", bonus: 0.15 },
+      effect: "+15% of base graduates per completed cycle. Timers stay at 40 seconds.",
     },
     {
       id: "appoint-observer",
@@ -1397,8 +1435,8 @@ export const definitions: Definitions = {
       requires: ["academy"],
       cost: { N: 1 },
 
-      output: { K: 0.5 },
-      effect: "Permanent appointment: add Knowledge production. No Data drain.",
+      output: { K: 2 },
+      effect: "Permanent appointment: add 2 base Knowledge/s. No Data drain.",
     },
     {
       id: "appoint-educator",
@@ -1429,10 +1467,10 @@ export const definitions: Definitions = {
       kind: "appointment",
       requires: ["teaching-qualification"],
       cost: { N: 1, F: 30, K: 10 },
-      growth: 3,
+      growth: 4,
 
       effect:
-        "One qualified graduate establishes another independent 40-second classroom. Stock prices triple per team; no upkeep.",
+        "One qualified graduate establishes another independent 40-second classroom. Stock prices quadruple per team; no upkeep.",
     },
     {
       id: "appoint-researcher",

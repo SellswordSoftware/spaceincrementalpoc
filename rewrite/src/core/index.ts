@@ -21,7 +21,7 @@ export function createCore(content: Definitions = definitions, tuning: Balance =
   return {
     ...economy,
     ...simulation,
-    ...createSummary(economy, simulation.previewPrestige),
+    ...createSummary(economy, simulation),
     ...createSaves(content, tuning),
   };
 }

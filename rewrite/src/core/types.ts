@@ -109,6 +109,7 @@ export type Balance = {
   startingStocks: Record<StockId, number>;
   course: { seconds: number };
   knowledgePerData: number;
+  assistanceSeconds: number;
   actionCooldownTicks: number;
   prestige: { requires: string[]; baseAward: number };
 };

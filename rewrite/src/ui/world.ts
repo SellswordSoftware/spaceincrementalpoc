@@ -69,7 +69,13 @@ export async function createWorld(
     StationId,
     { root: Container; graphic: Graphics; label: Text; state: string }
   >();
-  const colors = { open: 0x9bbeb6, locked: 0x536d78, fresh: 0xe3b969, selected: 0xeaf4ea };
+  const colors = {
+    open: 0x9bbeb6,
+    locked: 0x536d78,
+    fresh: 0xe3b969,
+    ready: 0x64d9c3,
+    selected: 0xeaf4ea,
+  };
   function draw(graphic: Graphics, id: StationId, color: number) {
     graphic.clear().ellipse(0, 16, 65, 10).fill({ color: 0x000000, alpha: 0.2 });
     graphic.roundRect(-58, -5, 116, 16, 3).fill(0x233e47).stroke({ color, width: 2 });
@@ -148,12 +154,17 @@ export async function createWorld(
     nodes.set(id, { root, graphic, label, state: "" });
   }
   let selected: StationId | null = null;
-  function update(stations: StationView[], fresh: Set<StationId>, active: StationId | null) {
+  function update(
+    stations: StationView[],
+    fresh: Set<StationId>,
+    active: StationId | null,
+    ready: Set<StationId>,
+  ) {
     selected = active;
     for (const station of stations) {
       const node = nodes.get(station.id)!;
       node.root.visible = station.visible;
-      const state = `${station.name}:${station.open}:${fresh.has(station.id)}:${active === station.id}`;
+      const state = `${station.name}:${station.open}:${fresh.has(station.id)}:${ready.has(station.id)}:${active === station.id}`;
       if (state === node.state) continue;
       node.state = state;
       const color =
@@ -161,9 +172,11 @@ export async function createWorld(
           ? colors.selected
           : fresh.has(station.id)
             ? colors.fresh
-            : station.open
-              ? colors.open
-              : colors.locked;
+            : ready.has(station.id)
+              ? colors.ready
+              : station.open
+                ? colors.open
+                : colors.locked;
       draw(node.graphic, station.id, color);
       node.label.text = station.name;
       node.label.style.fill = color;

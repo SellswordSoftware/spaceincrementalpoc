@@ -51,6 +51,7 @@ export function validateBalance(balance: Balance) {
   requireValid(balance.course.seconds > 0, "course", "cycle seconds must be positive");
   integer(balance.prestige.baseAward, "prestige.baseAward");
   requireValid(balance.prestige.baseAward > 0, "prestige.baseAward", "must be positive");
+  nonnegative(balance.assistanceSeconds, "assistanceSeconds");
   integer(balance.actionCooldownTicks, "actionCooldownTicks");
   requireValid(balance.actionCooldownTicks > 0, "actionCooldownTicks", "must be positive");
 }

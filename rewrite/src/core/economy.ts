@@ -74,7 +74,12 @@ export function createEconomy(definitions: Definitions, balance: Balance) {
     );
   }
   function analysisYield(game: Game) {
-    return balance.knowledgePerData * multiplier(game, "analysis");
+    // Frontier and observing Insight already increase raw Data volume. Normalize those
+    // gains here; analysis capacity and its Insight determine the Knowledge reward.
+    return (
+      (balance.knowledgePerData * multiplier(game, "analysis")) /
+      (observingFrontier(game).yield * insightMultiplier(game, "observing"))
+    );
   }
   function baseProduction(game: Game): Output {
     const output: Output = {};
@@ -104,6 +109,18 @@ export function createEconomy(definitions: Definitions, balance: Balance) {
   }
   function productionRates(game: Game) {
     return scaledOutput(game, baseProduction(game));
+  }
+  function actionOutput(game: Game, actionId: string): Output {
+    const action = data.actions.get(actionId);
+    if (!action) return {};
+    const minimum = scaledOutput(game, action.output),
+      rates = productionRates(game);
+    return Object.fromEntries(
+      Object.entries(minimum).map(([key, amount]) => [
+        key,
+        Math.max(amount, (rates[key as keyof Output] ?? 0) * balance.assistanceSeconds),
+      ]),
+    );
   }
   function previewInvestment(game: Game, investmentId: string) {
     const candidate = {
@@ -136,9 +153,10 @@ export function createEconomy(definitions: Definitions, balance: Balance) {
         );
     let activeGain = 0;
     if (relevantAction) {
-      const key = Object.keys(relevantAction.output)[0];
-      const amount = Object.values(relevantAction.output)[0];
-      activeGain = amount * (outputMultiplier(candidate, key) - outputMultiplier(game, key));
+      const key = Object.keys(relevantAction.output)[0] as keyof Output;
+      activeGain =
+        (actionOutput(candidate, relevantAction.id)[key] ?? 0) -
+        (actionOutput(game, relevantAction.id)[key] ?? 0);
     }
     return {
       passive,
@@ -218,6 +236,7 @@ export function createEconomy(definitions: Definitions, balance: Balance) {
     outputMultiplier,
     scaledOutput,
     analysisYield,
+    actionOutput,
     baseProduction,
     productionRates,
     previewInvestment,

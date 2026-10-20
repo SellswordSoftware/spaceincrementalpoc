@@ -1,7 +1,8 @@
 import { core, TICK_SECONDS, type Command, type GameState } from "./core/index.ts";
+import { openLogStorage } from "./diagnostics/log-storage.ts";
 import { PlaytestLog } from "./diagnostics/playtest-log.ts";
 import { createWorld } from "./ui/world.ts";
-import { createPanels, element, number } from "./ui/panels.ts";
+import { createPanels, costs, element, number } from "./ui/panels.ts";
 import "./style.css";
 
 const SAVE_KEY = "eyes.rewrite.save.v1",
@@ -33,8 +34,15 @@ async function start() {
       "Saved progress could not load. It is preserved; import a save or start a new game to replace it.",
     );
   }
+  let archive: Awaited<ReturnType<typeof openLogStorage>> | undefined;
   try {
-    const saved = localStorage.getItem(LOG_KEY);
+    archive = await openLogStorage();
+  } catch {
+    message("Playtest archive unavailable. Keep exports; browser storage may be limited.");
+  }
+  try {
+    const archived = await archive?.load();
+    const saved = archived ? JSON.stringify(archived) : localStorage.getItem(LOG_KEY);
     if (saved) {
       const data = JSON.parse(saved);
       if (data.format === 1 && Array.isArray(data.entries)) log = new PlaytestLog(core, data);
@@ -52,16 +60,24 @@ async function start() {
       } catch {
         message("Saving is unavailable. Export your game to keep a copy.");
       }
-    try {
-      localStorage.setItem(LOG_KEY, log.storageJSON());
-    } catch {
-      message("Playtest log could not be saved locally. Export it to keep a copy.");
+    if (archive) {
+      void archive
+        .save(log.data)
+        .then(() => localStorage.removeItem(LOG_KEY))
+        .catch(() =>
+          message("Playtest archive could not be saved. Export the log to keep the full timeline."),
+        );
+    } else {
+      try {
+        localStorage.setItem(LOG_KEY, log.storageJSON());
+      } catch {
+        message("Playtest log could not be saved locally. Export it to keep the full timeline.");
+      }
     }
   }
   function hold(id: string | null) {
     held = id;
     if (id) send({ type: "performStationAction", actionId: id }, true);
-    else log.flush();
   }
   let panels: ReturnType<typeof createPanels> | undefined;
   const world = await createWorld(
@@ -81,6 +97,12 @@ async function start() {
     },
     hold,
     world,
+    (id) => {
+      log.track(game, id);
+      refresh();
+      persist();
+    },
+    () => log.data.targetId,
   );
   function send(command: Command, quiet = false) {
     const before = command.type === "reviewOption" ? null : log.snapshot(game);
@@ -216,9 +238,40 @@ async function start() {
     },
     listen,
   );
+  let targetId: string | null = null,
+    targetReady = false;
+  get("target-focus").addEventListener(
+    "click",
+    () => {
+      const item = core.definitions.investments.find((item) => item.id === targetId);
+      if (item) {
+        world.focus(item.station);
+        panels?.select(item.station, true);
+        refresh();
+      }
+    },
+    listen,
+  );
+  get("target-buy").addEventListener(
+    "click",
+    () => {
+      if (targetId) send({ type: "buyInvestment", investmentId: targetId });
+    },
+    listen,
+  );
+  get("target-clear").addEventListener(
+    "click",
+    () => {
+      log.track(game, null);
+      refresh();
+      persist();
+    },
+    listen,
+  );
   function refresh() {
     const summary = core.getSummary(game);
     const fresh = new Set(summary.newOptions.map((item) => item.station));
+    const ready = new Set(summary.readyOptions.map((item) => item.station));
     const reveals: Record<string, boolean> = {
       D: true,
       K: core.hasPrerequisite(game, "analysis-tools"),
@@ -254,14 +307,61 @@ async function start() {
       const view = navigation.get(station.id)!;
       view.button.hidden = !station.visible;
       view.button.classList.toggle("is-new", fresh.has(station.id));
+      view.button.classList.toggle("is-ready", ready.has(station.id));
       view.button.classList.toggle("is-active", panels?.active === station.id);
       view.button.setAttribute("aria-pressed", String(panels?.active === station.id));
       const count = summary.newOptions.filter((item) => item.station === station.id).length;
-      view.badge.textContent = count ? `${count} new` : station.open ? "" : "Establish";
+      const affordable = summary.readyOptions.filter((item) => item.station === station.id).length;
+      view.badge.textContent =
+        [count ? `${count} new` : "", affordable ? `${affordable} ready` : ""]
+          .filter(Boolean)
+          .join(" · ") || (station.open ? "" : "Establish");
     }
-    world.update(summary.stations, fresh, panels?.active ?? null);
+    world.update(summary.stations, fresh, panels?.active ?? null, ready);
     panels?.update();
     get("objective").textContent = summary.guidance.objective;
+    const tracked = log.data.targetId;
+    const item = core.definitions.investments.find(
+      (item) => item.id === (tracked ?? summary.guidance.nextId),
+    );
+    get("purchase-target").hidden =
+      !item || game.state.insight.phase !== "playing" || game.state.joint.completedAtTick !== null;
+    if (item) {
+      const quote = core.quoteCommand(game, { type: "buyInvestment", investmentId: item.id });
+      if (targetId === item.id && !targetReady && quote.ok) {
+        message(`${item.name} is now ready to buy.`);
+        log.mark(game, "purchase-ready", { investmentId: item.id });
+      }
+      targetId = item.id;
+      targetReady = quote.ok;
+      get("target-focus").textContent = `${tracked ? "Tracking" : "Next"}: ${item.name}`;
+      get("target-clear").hidden = !tracked;
+      get("target-buy").setAttribute("aria-disabled", String(!quote.ok));
+      get("target-buy").textContent = `Buy · ${costs(quote.costs)}`;
+      const waits = Object.entries(quote.costs).map(([id, cost]) => {
+        const stock =
+          id === "N"
+            ? summary.population.available
+            : (game.state.resources[id as keyof typeof game.state.resources] ?? 0);
+        const rate =
+          id === "N" ? summary.rates.training : summary.rates[id as keyof typeof summary.rates];
+        return cost <= stock ? 0 : rate ? (cost - stock) / rate : Infinity;
+      });
+      const wait = Math.max(
+        0,
+        ...waits,
+        ((item.publications ?? 0) - game.state.science.publications) /
+          (summary.rates.science || Number.MIN_VALUE),
+      );
+      const prerequisites = item.requires.every((id) => core.hasPrerequisite(game, id));
+      get("target-status").textContent = quote.ok
+        ? "Ready to buy"
+        : `${quote.blockedReasons.join(" · ")}${prerequisites && wait > 0 && Number.isFinite(wait) ? ` · ~${Math.ceil(wait)}s at current production` : ""}`;
+      get("purchase-target").classList.toggle("is-ready", quote.ok);
+    } else {
+      targetId = null;
+      targetReady = false;
+    }
     const seconds = Math.floor(summary.seconds);
     get("clock").textContent = `Run ${game.state.clock.campaignIndex} · ${Math.floor(seconds / 60)
       .toString()
@@ -521,6 +621,7 @@ async function start() {
     renderPrestige();
     dialog.showModal();
   }
+  persist();
   frame = requestAnimationFrame(loop);
   const saving = setInterval(() => {
     if (dirty) persist();
@@ -532,6 +633,8 @@ async function start() {
     events.abort();
     panels?.destroy();
     world.destroy();
+    // Transactions already queued by persist finish before the connection closes.
+    archive?.close();
   });
 }
 void start().catch((error: unknown) => {
